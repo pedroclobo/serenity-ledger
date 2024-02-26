@@ -4,18 +4,18 @@ import com.google.gson.Gson;
 
 public class CommitMessage {
 
-    // Value
-    private String value;
+  // Value
+  private String value;
 
-    public CommitMessage(String value) {
-        this.value = value;
-    }
+  public CommitMessage(String value) {
+    this.value = value;
+  }
 
-    public String getValue() {
-        return value;
-    }
+  public String getValue() {
+    return value;
+  }
 
-    public String toJson() {
-        return new Gson().toJson(this);
-    }
+  public String toJson() {
+    return new Gson().toJson(this);
+  }
 }

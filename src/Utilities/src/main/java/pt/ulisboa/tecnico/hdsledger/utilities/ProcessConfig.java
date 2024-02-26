@@ -1,41 +1,41 @@
 package pt.ulisboa.tecnico.hdsledger.utilities;
 
 public class ProcessConfig {
-    public ProcessConfig() {}
+  public ProcessConfig() {}
 
-    private boolean isLeader;
+  private boolean isLeader;
 
-    private String hostname;
+  private String hostname;
 
-    private String id;
+  private String id;
 
-    private int port;
+  private int port;
 
-    private int clientPort;
+  private int clientPort;
 
-    public boolean isLeader() {
-        return isLeader;
-    }
+  public boolean isLeader() {
+    return isLeader;
+  }
 
-    public int getPort() {
-        return port;
-    }
+  public int getPort() {
+    return port;
+  }
 
-    public void setPort(int port) {
-        this.port = port;
-    }
+  public void setPort(int port) {
+    this.port = port;
+  }
 
-    public int getClientPort() {
-        return clientPort;
-    }
+  public int getClientPort() {
+    return clientPort;
+  }
 
-    public String getId() {
-        return id;
-    }
+  public String getId() {
+    return id;
+  }
 
-    public String getHostname() {
-        return hostname;
-    }
+  public String getHostname() {
+    return hostname;
+  }
 
 
 }

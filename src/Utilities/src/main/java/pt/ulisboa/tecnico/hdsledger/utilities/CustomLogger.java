@@ -8,31 +8,32 @@ import java.util.logging.Logger;
 
 public class CustomLogger {
 
-    private static Logger LOGGER;
+  private static Logger LOGGER;
 
-    public CustomLogger(String name) {
-        LOGGER = Logger.getLogger(name);
-        LOGGER.setLevel(Level.ALL);
-        LOGGER.setUseParentHandlers(false);
-        ConsoleHandler handler = new ConsoleHandler();
+  public CustomLogger(String name) {
+    LOGGER = Logger.getLogger(name);
+    LOGGER.setLevel(Level.ALL);
+    LOGGER.setUseParentHandlers(false);
+    ConsoleHandler handler = new ConsoleHandler();
 
-        Formatter formatter = new CustomLog();
-        handler.setFormatter(formatter);
+    Formatter formatter = new CustomLog();
+    handler.setFormatter(formatter);
 
-        LOGGER.addHandler(handler);
-    }
+    LOGGER.addHandler(handler);
+  }
 
-    public void log(Level level, String message) {
-        LOGGER.log(level, message);
-    }
+  public void log(Level level, String message) {
+    LOGGER.log(level, message);
+  }
 
 }
 
+
 class CustomLog extends Formatter {
-    @Override
-    public String format(LogRecord record) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(record.getMessage()).append('\n');
-        return sb.toString();
-    }
+  @Override
+  public String format(LogRecord record) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(record.getMessage()).append('\n');
+    return sb.toString();
+  }
 }
