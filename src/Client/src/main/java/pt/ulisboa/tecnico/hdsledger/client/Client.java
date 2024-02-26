@@ -29,6 +29,11 @@ public class Client {
         ProcessConfig[] clientConfigs = new ProcessConfigBuilder().fromFile(clientsConfigPath);
         ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
 
+        // Allow the client to connect to the server's correct port
+        for (ProcessConfig nodeConfig : nodeConfigs) {
+            nodeConfig.setPort(nodeConfig.getClientPort());
+        }
+
         // Get the client config
         Optional<ProcessConfig> clientConfig = Arrays.stream(clientConfigs)
                 .filter(c -> c.getId().equals(clientId))

@@ -11,12 +11,22 @@ public class ProcessConfig {
 
     private int port;
 
+    private int clientPort;
+
     public boolean isLeader() {
         return isLeader;
     }
 
     public int getPort() {
         return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public int getClientPort() {
+        return clientPort;
     }
 
     public String getId() {
