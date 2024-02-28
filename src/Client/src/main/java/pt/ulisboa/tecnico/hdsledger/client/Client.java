@@ -16,7 +16,7 @@ public class Client {
   public static void main(String[] args){
 
         // Parse command line arguments
-        if (args.length != 3 || args.length != 4) {
+        if (args.length != 3 && args.length != 4) {
             System.err.println("Usage: java Client <clientId> <nodesConfigPath> <clientsConfigPath> [--verbose|-v]");
             System.exit(1);
         }
