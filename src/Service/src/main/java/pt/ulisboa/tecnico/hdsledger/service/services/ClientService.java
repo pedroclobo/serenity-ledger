@@ -50,13 +50,13 @@ public class ClientService implements UDPService {
   @Override
     public void listen() {
         try {
-            // Thread to listen on every request
+            // A new thread is created to listen for incoming messages
             new Thread(() -> {
                 try {
                     while (true) {
                         Message message = link.receive();
 
-                        // Separate thread to handle each message
+                        // Each new message is handled by a new thread
                         new Thread(() -> {
                             switch (message.getType()) {
                                 case APPEND ->
