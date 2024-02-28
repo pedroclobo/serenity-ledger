@@ -14,7 +14,6 @@ public class Library {
 
   private static final Logger LOGGER = Logger.getLogger(Library.class.getName());
   private Link link;
-  private final String id = "5";
   private ProcessConfig clientConfig;
 
   public Library(ProcessConfig[] nodeConfigs, ProcessConfig clientConfig, boolean activateLogs) {
@@ -23,7 +22,7 @@ public class Library {
   }
 
   public void append(String value) {
-    Message message = new AppendMessage(id, Type.APPEND, value);
+    Message message = new AppendMessage(clientConfig.getId(), Type.APPEND, value);
     link.broadcast(message);
     listen();
   }
@@ -38,21 +37,21 @@ public class Library {
                         switch (message.getType()) {
                             case APPEND -> {
                                 LOGGER.log(Level.INFO, "{0} - Received APPEND message from {1}",
-                                        new Object[]{id, message.getSenderId()});
+                                        new Object[]{clientConfig.getId(), message.getSenderId()});
                             }
                             case ACK -> {
                                 LOGGER.log(Level.INFO, "{0} - Received ACK message from {1}",
-                                        new Object[]{id, message.getSenderId()});
+                                        new Object[]{clientConfig.getId(), message.getSenderId()});
                                 continue;
                             }
                             case IGNORE -> {
                                 LOGGER.log(Level.INFO, "{0} - Received IGNORE message from {1}",
-                                        new Object[]{id, message.getSenderId()});
+                                        new Object[]{clientConfig.getId(), message.getSenderId()});
                                 continue;
                             }
                             default -> {
                                 LOGGER.log(Level.INFO, "{0} - Received unknown message from {1}",
-                                        new Object[]{id, message.getSenderId()});
+                                        new Object[]{clientConfig.getId(), message.getSenderId()});
                                 continue;
                             }
                         }
