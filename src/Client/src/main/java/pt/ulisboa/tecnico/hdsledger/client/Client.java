@@ -6,7 +6,6 @@ import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.Scanner;
 
 public class Client {
@@ -17,34 +16,38 @@ public class Client {
   public static void main(String[] args){
 
         // Parse command line arguments
-        final String clientId = args[0];
+        if (args.length != 3 || args.length != 4) {
+            System.err.println("Usage: java Client <clientId> <nodesConfigPath> <clientsConfigPath> [--verbose|-v]");
+            System.exit(1);
+        }
+
+        String clientId = args[0];
         nodesConfigPath += args[1];
         clientsConfigPath += args[2];
         boolean activateLogs = false;
         if (args.length == 4) {
-            activateLogs = args[3].equals("-debug");
+            // Activate logs
+            activateLogs = args[3].equals("--verbose") || args[3].equals("-v");
         }
 
-        // Process client and node configs
+        // Retrieve client and node configurations from files
         ProcessConfig[] clientConfigs = new ProcessConfigBuilder().fromFile(clientsConfigPath);
         ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
 
-        // Allow the client to connect to the server's correct port
+        // The client connects to the server using the server's specified client port
         for (ProcessConfig nodeConfig : nodeConfigs) {
             nodeConfig.setPort(nodeConfig.getClientPort());
         }
 
-        // Get the client config
-        Optional<ProcessConfig> clientConfig = Arrays.stream(clientConfigs)
+        // Retrieve the current client's config
+        ProcessConfig clientConfig = Arrays.stream(clientConfigs)
                 .filter(c -> c.getId().equals(clientId))
-                .findFirst();
-        if (clientConfig.isEmpty())
-            throw new HDSSException(ErrorMessage.ConfigFileFormat);
+                .findFirst()
+                .orElseThrow(() -> new HDSSException(ErrorMessage.ConfigFileNotFound));
 
-        ProcessConfig config = clientConfig.get();
-
-        // Listen for node messages
-        Library library = new Library(nodeConfigs, config, activateLogs);
+        // The library is responsible for translating client's requests into
+        // messages and sending them to the server
+        Library library = new Library(nodeConfigs, clientConfig, activateLogs);
         library.listen();
 
         final Scanner scanner = new Scanner(System.in);
@@ -64,11 +67,10 @@ public class Client {
             switch (tokens[0]) {
                 case "append" -> {
                     if (tokens.length == 2){
-                        System.out.println("Appending to blockchain...");
-                        System.out.println(tokens[1]);
+                        System.out.printf("Appending %s to blockchain%n", tokens[1]);
                         library.append(tokens[1]);
                     } else {
-                        System.err.println("Append takes 1 argument.");
+                        System.err.println("Usage: append <str>");
                     }
                 }
                 case "exit" -> {
@@ -77,7 +79,7 @@ public class Client {
                     System.exit(0);
                 }
                 default -> {
-                    System.err.println("Unrecognized command:" + line);
+                    System.err.println("Unrecognized command: " + line);
                 }
             }
         }
