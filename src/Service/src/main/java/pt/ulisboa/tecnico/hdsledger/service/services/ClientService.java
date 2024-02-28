@@ -48,45 +48,45 @@ public class ClientService implements UDPService {
   }
 
   @Override
-    public void listen() {
-        try {
-            // A new thread is created to listen for incoming messages
-            new Thread(() -> {
-                try {
-                    while (true) {
-                        Message message = link.receive();
+  public void listen() {
+      try {
+          // A new thread is created to listen for incoming messages
+          new Thread(() -> {
+              try {
+                  while (true) {
+                      Message message = link.receive();
 
-                        // Each new message is handled by a new thread
-                        new Thread(() -> {
-                            switch (message.getType()) {
-                                case APPEND ->
-                                    append((AppendMessage) message);
+                      // Each new message is handled by a new thread
+                      new Thread(() -> {
+                          switch (message.getType()) {
+                              case APPEND ->
+                                  append((AppendMessage) message);
 
-                                case ACK ->
-                                    LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received ACK message from {1}",
-                                            config.getId(), message.getSenderId()));
+                              case ACK ->
+                                  LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received ACK message from {1}",
+                                          config.getId(), message.getSenderId()));
 
-                                case IGNORE ->
-                                    LOGGER.log(Level.INFO,
-                                            MessageFormat.format("{0} - Received IGNORE message from {1}",
-                                                    config.getId(), message.getSenderId()));
+                              case IGNORE ->
+                                  LOGGER.log(Level.INFO,
+                                          MessageFormat.format("{0} - Received IGNORE message from {1}",
+                                                  config.getId(), message.getSenderId()));
 
-                                default ->
-                                    LOGGER.log(Level.INFO,
-                                            MessageFormat.format("{0} - Received unknown message from {1}",
-                                                    config.getId(), message.getSenderId()));
+                              default ->
+                                  LOGGER.log(Level.INFO,
+                                          MessageFormat.format("{0} - Received unknown message from {1}",
+                                                  config.getId(), message.getSenderId()));
 
-                            }
+                          }
 
-                        }).start();
-                    }
-                } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
-            }).start();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+                      }).start();
+                  }
+              } catch (IOException | ClassNotFoundException e) {
+                  e.printStackTrace();
+              }
+          }).start();
+      } catch (Exception e) {
+          e.printStackTrace();
+      }
+  }
 
 }
