@@ -31,17 +31,19 @@ public class CollapsingSet implements Set<Integer> {
   }
 
   @Override
-    public boolean contains(Object o) {
-        synchronized (this.set) {
-            if (!(o instanceof Integer i)) return false;
-            return i <= this.floor || this.set.contains(i);
-        }
+  public boolean contains(Object o) {
+    synchronized (this.set) {
+      if (!(o instanceof Integer i))
+        return false;
+      return i <= this.floor || this.set.contains(i);
     }
+  }
 
   private boolean unsafeContains(Object o) {
-        if (!(o instanceof Integer i)) return false;
-        return i <= this.floor || this.set.contains(i);
-    }
+    if (!(o instanceof Integer i))
+      return false;
+    return i <= this.floor || this.set.contains(i);
+  }
 
   private Set<Integer> getFullSet() {
     // inefficient

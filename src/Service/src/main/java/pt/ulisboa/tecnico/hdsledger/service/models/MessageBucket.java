@@ -25,9 +25,9 @@ public class MessageBucket {
 
   /*
    * Add a message to the bucket
-   * 
+   *
    * @param consensusInstance
-   * 
+   *
    * @param message
    */
   public void addMessage(ConsensusMessage message) {

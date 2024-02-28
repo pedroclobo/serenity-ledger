@@ -28,43 +28,43 @@ public class Library {
   }
 
   public void listen() {
+    try {
+      new Thread(() -> {
         try {
-            new Thread(() -> {
-                try {
-                    while (true) {
-                        Message message = link.receive();
+          while (true) {
+            Message message = link.receive();
 
-                        switch (message.getType()) {
-                            case APPEND -> {
-                                LOGGER.log(Level.INFO, "{0} - Received APPEND message from {1}",
-                                        new Object[]{clientConfig.getId(), message.getSenderId()});
-                            }
-                            case ACK -> {
-                                LOGGER.log(Level.INFO, "{0} - Received ACK message from {1}",
-                                        new Object[]{clientConfig.getId(), message.getSenderId()});
-                                continue;
-                            }
-                            case IGNORE -> {
-                                LOGGER.log(Level.INFO, "{0} - Received IGNORE message from {1}",
-                                        new Object[]{clientConfig.getId(), message.getSenderId()});
-                                continue;
-                            }
-                            default -> {
-                                LOGGER.log(Level.INFO, "{0} - Received unknown message from {1}",
-                                        new Object[]{clientConfig.getId(), message.getSenderId()});
-                                continue;
-                            }
-                        }
-                    }
-                } catch (HDSSException e) {
-                    LOGGER.log(Level.INFO, "{0} - EXCEPTION: {1}",
-                            new Object[]{clientConfig.getId(), e.getMessage()});
-                } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
-            }).start();
-        } catch (Exception e) {
-            e.printStackTrace();
+            switch (message.getType()) {
+              case APPEND -> {
+                LOGGER.log(Level.INFO, "{0} - Received APPEND message from {1}",
+                    new Object[] {clientConfig.getId(), message.getSenderId()});
+              }
+              case ACK -> {
+                LOGGER.log(Level.INFO, "{0} - Received ACK message from {1}",
+                    new Object[] {clientConfig.getId(), message.getSenderId()});
+                continue;
+              }
+              case IGNORE -> {
+                LOGGER.log(Level.INFO, "{0} - Received IGNORE message from {1}",
+                    new Object[] {clientConfig.getId(), message.getSenderId()});
+                continue;
+              }
+              default -> {
+                LOGGER.log(Level.INFO, "{0} - Received unknown message from {1}",
+                    new Object[] {clientConfig.getId(), message.getSenderId()});
+                continue;
+              }
+            }
+          }
+        } catch (HDSSException e) {
+          LOGGER.log(Level.INFO, "{0} - EXCEPTION: {1}",
+              new Object[] {clientConfig.getId(), e.getMessage()});
+        } catch (IOException | ClassNotFoundException e) {
+          e.printStackTrace();
         }
+      }).start();
+    } catch (Exception e) {
+      e.printStackTrace();
     }
+  }
 }

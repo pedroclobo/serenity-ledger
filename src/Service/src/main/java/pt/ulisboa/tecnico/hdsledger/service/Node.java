@@ -45,11 +45,10 @@ public class Node {
     ProcessConfig leaderConfig = Arrays.stream(nodeConfigs).filter(ProcessConfig::isLeader)
         .findAny().orElseThrow(() -> new HDSSException(ErrorMessage.NoLeaderNode));
 
-    LOGGER.log(Level.INFO,
-        MessageFormat.format(
-            "Node with id {0} with node socket on <{1}:{2}> and client socket on <{3}:{4}> and leader={5}",
-            nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
-            nodeConfig.getHostname(), nodeConfig.getClientPort(), nodeConfig.isLeader()));
+    LOGGER.log(Level.INFO, MessageFormat.format(
+        "Node with id {0} with node socket on <{1}:{2}> and client socket on <{3}:{4}> and leader={5}",
+        nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
+        nodeConfig.getHostname(), nodeConfig.getClientPort(), nodeConfig.isLeader()));
 
     // Abstraction to send and receive messages
     Link linkToNodes =

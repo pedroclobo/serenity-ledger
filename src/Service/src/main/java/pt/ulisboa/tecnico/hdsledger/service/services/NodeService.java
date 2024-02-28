@@ -92,9 +92,8 @@ public class NodeService implements UDPService {
   }
 
   /*
-   * Start an instance of consensus for a value
-   * Only the current leader will start a consensus instance
-   * the remaining nodes only update values.
+   * Start an instance of consensus for a value Only the current leader will start a consensus
+   * instance the remaining nodes only update values.
    *
    * @param inputValue Value to value agreed upon
    */
@@ -137,8 +136,8 @@ public class NodeService implements UDPService {
   }
 
   /*
-   * Handle pre prepare messages and if the message
-   * came from leader and is justified them broadcast prepare
+   * Handle pre prepare messages and if the message came from leader and is justified them broadcast
+   * prepare
    *
    * @param message Message to be handled
    */
@@ -291,10 +290,9 @@ public class NodeService implements UDPService {
     // Within an instance of the algorithm, each upon rule is triggered at most once
     // for any round r
     if (instance.getCommittedRound() >= round) {
-      LOGGER.log(Level.INFO,
-          MessageFormat.format(
-              "{0} - Already received COMMIT message for Consensus Instance {1}, Round {2}, ignoring",
-              config.getId(), consensusInstance, round));
+      LOGGER.log(Level.INFO, MessageFormat.format(
+          "{0} - Already received COMMIT message for Consensus Instance {1}, Round {2}, ignoring",
+          config.getId(), consensusInstance, round));
       return;
     }
 
@@ -333,56 +331,51 @@ public class NodeService implements UDPService {
   }
 
   @Override
-    public void listen() {
+  public void listen() {
+    try {
+      // Thread to listen on every request
+      new Thread(() -> {
         try {
-            // Thread to listen on every request
+          while (true) {
+            Message message = link.receive();
+
+            // Separate thread to handle each message
             new Thread(() -> {
-                try {
-                    while (true) {
-                        Message message = link.receive();
 
-                        // Separate thread to handle each message
-                        new Thread(() -> {
+              switch (message.getType()) {
 
-                            switch (message.getType()) {
-
-                                case PRE_PREPARE ->
-                                    uponPrePrepare((ConsensusMessage) message);
+                case PRE_PREPARE -> uponPrePrepare((ConsensusMessage) message);
 
 
-                                case PREPARE ->
-                                    uponPrepare((ConsensusMessage) message);
+                case PREPARE -> uponPrepare((ConsensusMessage) message);
 
 
-                                case COMMIT ->
-                                    uponCommit((ConsensusMessage) message);
+                case COMMIT -> uponCommit((ConsensusMessage) message);
 
 
-                                case ACK ->
-                                    LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received ACK message from {1}",
-                                            config.getId(), message.getSenderId()));
+                case ACK ->
+                  LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received ACK message from {1}",
+                      config.getId(), message.getSenderId()));
 
-                                case IGNORE ->
-                                    LOGGER.log(Level.INFO,
-                                            MessageFormat.format("{0} - Received IGNORE message from {1}",
-                                                    config.getId(), message.getSenderId()));
+                case IGNORE -> LOGGER.log(Level.INFO,
+                    MessageFormat.format("{0} - Received IGNORE message from {1}", config.getId(),
+                        message.getSenderId()));
 
-                                default ->
-                                    LOGGER.log(Level.INFO,
-                                            MessageFormat.format("{0} - Received unknown message from {1}",
-                                                    config.getId(), message.getSenderId()));
+                default -> LOGGER.log(Level.INFO,
+                    MessageFormat.format("{0} - Received unknown message from {1}", config.getId(),
+                        message.getSenderId()));
 
-                            }
+              }
 
-                        }).start();
-                    }
-                } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
             }).start();
-        } catch (Exception e) {
-            e.printStackTrace();
+          }
+        } catch (IOException | ClassNotFoundException e) {
+          e.printStackTrace();
         }
+      }).start();
+    } catch (Exception e) {
+      e.printStackTrace();
     }
+  }
 
 }
