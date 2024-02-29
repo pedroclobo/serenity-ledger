@@ -14,5 +14,6 @@
         <module>Communication</module>
         <module>Library</module>
         <module>Client</module>
+        <module>PKI</module>
     </modules>
 </project>
