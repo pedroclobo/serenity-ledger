@@ -55,6 +55,18 @@ Compile and install all modules using:
 mvn clean install
 ```
 
+### Key Generation
+
+To generate the public and private keys for the nodes and clients, run the following command for each node and client:
+
+```
+cd PKI
+mvn compile exec:java -Dexec.args="w <priv-key-file> <pub-key-file>"
+```
+
+Then update the `config.json` files with the path to the generated keys in the `Service` and `Client` modules.
+
+
 ### Execution
 
 Begin by running the `Service` module.
