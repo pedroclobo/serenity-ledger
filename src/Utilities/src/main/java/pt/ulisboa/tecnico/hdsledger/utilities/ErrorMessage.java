@@ -7,7 +7,10 @@ public enum ErrorMessage {
               "Can't send a message to a non existing node"), NoLeaderNode(
                   "No leader node available"), SocketSendingError(
                       "Error while sending message"), CannotOpenSocket(
-                          "Error while opening socket"),;
+                          "Error while opening socket"), SignatureError(
+                              "Error while producing signature"), SignatureVerificationError(
+                                  "Error while verifying signature"), InvalidSignature(
+                                      "Invalid signature"),;
 
   private final String message;
 

@@ -5,6 +5,10 @@ import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 import java.io.IOException;
 import java.net.*;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -154,8 +158,23 @@ public class Link {
    */
   public void unreliableSend(InetAddress hostname, int port, Message data) {
     new Thread(() -> {
+
+      String messageJson = new Gson().toJson(data);
+      Optional<String> signature = Optional.empty();
+
       try {
-        byte[] buf = new Gson().toJson(data).getBytes();
+        // Sign the message with the private key
+        signature = Optional.of(RSACryptography.sign(config.getPrivateKeyPath(), messageJson));
+      } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
+          | InvalidKeySpecException e) {
+        e.printStackTrace();
+        throw new HDSSException(ErrorMessage.SignatureError);
+      }
+
+      SignedMessage signedMessage = new SignedMessage(messageJson, signature.get());
+      byte[] buf = new Gson().toJson(signedMessage).getBytes();
+
+      try {
         DatagramPacket packet = new DatagramPacket(buf, buf.length, hostname, port);
         socket.send(packet);
       } catch (IOException e) {
@@ -188,6 +207,19 @@ public class Link {
       byte[] buffer = Arrays.copyOfRange(response.getData(), 0, response.getLength());
       serialized = new String(buffer);
       message = new Gson().fromJson(serialized, Message.class);
+
+      // Verify signature of the message
+      SignedMessage signedMessage = new Gson().fromJson(serialized, SignedMessage.class);
+      try {
+        if (!RSACryptography.verify(nodes.get(message.getSenderId()).getPublicKeyPath(),
+            signedMessage.getMessage(), signedMessage.getSignature())) {
+          message.setType(Message.Type.IGNORE);
+          throw new HDSSException(ErrorMessage.InvalidSignature);
+        } 
+      } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+        e.printStackTrace();
+        throw new HDSSException(ErrorMessage.SignatureVerificationError);
+      }
     }
 
     String senderId = message.getSenderId();
