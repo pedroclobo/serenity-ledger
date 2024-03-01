@@ -79,4 +79,8 @@ public class Node {
     }
   }
 
+  public NodeService getNodeService() {
+    return nodeService;
+  }
+
 }
