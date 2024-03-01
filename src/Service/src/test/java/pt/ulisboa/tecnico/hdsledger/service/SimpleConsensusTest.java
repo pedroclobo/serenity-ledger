@@ -60,11 +60,6 @@ class SimpleConsensusTest {
 
     library.append("value");
 
-    try {
-      Thread.sleep(10000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
     for (Node node : nodes) {
       assertEquals(1, node.getNodeService().getLedger().size());
       assertEquals("value", node.getNodeService().getLedger().get(0));
