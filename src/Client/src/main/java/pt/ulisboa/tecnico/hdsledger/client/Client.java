@@ -32,8 +32,8 @@ public class Client {
     }
 
     // Retrieve client and node configurations from files
-    ProcessConfig[] clientConfigs = new ProcessConfigBuilder().fromFile(clientsConfigPath);
-    ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
+    ProcessConfig[] clientConfigs = ProcessConfigBuilder.fromFile(clientsConfigPath);
+    ProcessConfig[] nodeConfigs = ProcessConfigBuilder.fromFile(nodesConfigPath);
 
     // The client connects to the server using the server's specified client port
     for (ProcessConfig nodeConfig : nodeConfigs) {
