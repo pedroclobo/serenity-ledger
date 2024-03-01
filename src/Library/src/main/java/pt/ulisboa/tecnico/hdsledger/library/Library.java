@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
@@ -20,7 +21,7 @@ public class Library {
   private Link link;
   private ProcessConfig clientConfig;
   private int quorumSize;
-  private ConcurrentHashMap<String, Integer> acks;
+  private ConcurrentHashMap<String, CountDownLatch> acks;
 
   public Library(ProcessConfig[] nodeConfigs, ProcessConfig clientConfig, boolean activateLogs) {
     link = new Link(clientConfig, clientConfig.getPort(), nodeConfigs, AppendMessage.class);
@@ -31,28 +32,24 @@ public class Library {
 
   public void append(String value) {
     Message message = new AppendMessage(clientConfig.getId(), Type.APPEND, value);
-    acks.put(value, 0);
+    CountDownLatch latch = new CountDownLatch(quorumSize);
+
+    synchronized (acks) {
+      acks.put(value, latch);
+    }
+
     link.broadcast(message);
-
-    // Wait for the reply of a quorum of nodes
-    Thread thread = new Thread(() -> {
-      while (acks.get(value) < quorumSize) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-      acks.remove(value);
-    });
-
-    thread.start();
     listen();
 
+    // Wait for the reply of a quorum of nodes
     try {
-      thread.join();
+      latch.await();
     } catch (InterruptedException e) {
       e.printStackTrace();
+    }
+
+    synchronized (acks) {
+      acks.remove(value);
     }
   }
 
@@ -74,9 +71,8 @@ public class Library {
             switch (message.getType()) {
               case APPEND -> {
                 AppendMessage appendMessage = (AppendMessage) message;
-                synchronized (acks) {
-                  acks.put(appendMessage.getValue(),
-                      acks.getOrDefault(appendMessage.getValue(), 0) + 1);
+                if (acks.containsKey(appendMessage.getValue())) {
+                  acks.get(appendMessage.getValue()).countDown();
                 }
                 LOGGER.log(Level.INFO, "{0} - Received APPEND message from {1}",
                     new Object[] {clientConfig.getId(), message.getSenderId()});
