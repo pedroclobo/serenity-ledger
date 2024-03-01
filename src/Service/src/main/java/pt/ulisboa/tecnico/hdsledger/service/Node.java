@@ -17,27 +17,36 @@ import java.util.logging.Level;
 public class Node {
 
   private static final CustomLogger LOGGER = new CustomLogger(Node.class.getName());
-
   private static String nodesConfigPath = "src/main/resources/";
-  private static String clientsConfigPath = "../Client/src/main/resources/client_config.json";
+  private static String clientsConfigPath = "../Client/src/main/resources/";
+
+  private Link linkToNodes;
+  private Link linkToClients;
+  private NodeService nodeService;
+  private ClientService clientService;
 
   public static void main(String[] args) {
 
     // Parse command line arguments
-    if (args.length != 2) {
-      System.err.println("Usage: java Node <nodeId> <nodesConfigPath>");
+    if (args.length != 3) {
+      System.err.println("Usage: java Node <nodeId> <nodesConfigPath> <clientsConfigPath>");
       System.exit(1);
     }
     String id = args[0];
     nodesConfigPath += args[1];
-
-    // Retrieve nodes and client configurations
-    ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
-    ProcessConfig[] clientConfigs = new ProcessConfigBuilder().fromFile(clientsConfigPath);
+    clientsConfigPath += args[2];
 
     LOGGER.log(Level.INFO, MessageFormat.format(
         "Node configuration: {0}\nClient Configuration: {1}", nodesConfigPath, clientsConfigPath));
 
+    // Retrieve nodes and client configurations
+    ProcessConfig[] nodeConfigs = ProcessConfigBuilder.fromFile(nodesConfigPath);
+    ProcessConfig[] clientConfigs = ProcessConfigBuilder.fromFile(clientsConfigPath);
+
+    new Node(id, nodeConfigs, clientConfigs).start();
+  }
+
+  public Node(String id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs) {
     // Retrieve the current node's config and the leader's config
     ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId().equals(id))
         .findAny().orElseThrow(() -> new HDSSException(ErrorMessage.NoSuchNode));
@@ -51,16 +60,17 @@ public class Node {
         nodeConfig.getHostname(), nodeConfig.getClientPort(), nodeConfig.isLeader()));
 
     // Abstraction to send and receive messages
-    Link linkToNodes =
-        new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs, ConsensusMessage.class);
-    Link linkToClients =
+    linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs, ConsensusMessage.class);
+    linkToClients =
         new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, AppendMessage.class);
 
     // Services that implement listen from UDPService
-    NodeService nodeService = new NodeService(linkToNodes, nodeConfig, leaderConfig, nodeConfigs);
-    ClientService clientService =
+    nodeService = new NodeService(linkToNodes, nodeConfig, leaderConfig, nodeConfigs);
+    clientService =
         new ClientService(linkToClients, nodeConfig, leaderConfig, nodeConfigs, nodeService);
+  }
 
+  public void start() {
     try {
       nodeService.listen();
       clientService.listen();
