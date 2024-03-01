@@ -67,8 +67,9 @@ public class Client {
       switch (tokens[0]) {
         case "append" -> {
           if (tokens.length == 2) {
-            System.out.printf("Appending %s to blockchain%n", tokens[1]);
+            System.out.printf("Appending %s to blockchain...%n", tokens[1]);
             library.append(tokens[1]);
+            System.out.printf("Value %s was appended with success!%n", tokens[1]);
           } else {
             System.err.println("Usage: append <str>");
           }

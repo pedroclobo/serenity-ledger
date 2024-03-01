@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+
+import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
@@ -35,6 +37,8 @@ public class NodeService implements UDPService {
 
   // Link to communicate with nodes
   private final Link link;
+  // Link to communicate with clients
+  private final Link clientLink;
 
   // Consensus instance -> Round -> List of prepare messages
   private final MessageBucket prepareMessages;
@@ -53,10 +57,11 @@ public class NodeService implements UDPService {
   // Ledger (for now, just a list of strings)
   private ArrayList<String> ledger = new ArrayList<String>();
 
-  public NodeService(Link link, ProcessConfig config, ProcessConfig leaderConfig,
+  public NodeService(Link link, Link clientLink, ProcessConfig config, ProcessConfig leaderConfig,
       ProcessConfig[] nodesConfig) {
 
     this.link = link;
+    this.clientLink = clientLink;
     this.config = config;
     this.leaderConfig = leaderConfig;
     this.nodesConfig = nodesConfig;
@@ -328,6 +333,10 @@ public class NodeService implements UDPService {
           MessageFormat.format(
               "{0} - Decided on Consensus Instance {1}, Round {2}, Successful? {3}", config.getId(),
               consensusInstance, round, true));
+
+      // Notify clients
+      Message messageToClient = new AppendMessage(config.getId(), Message.Type.APPEND, value);
+      clientLink.broadcast(messageToClient);
     }
   }
 
