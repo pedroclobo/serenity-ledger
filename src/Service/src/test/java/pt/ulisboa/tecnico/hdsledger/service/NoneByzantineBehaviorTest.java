@@ -13,13 +13,13 @@ import pt.ulisboa.tecnico.hdsledger.library.Library;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 
-class SimpleConsensusTest {
+class NoneByzantineBehaviorTest {
 
   private String nodesConfigJson = String.join(",\n",
-      "[{ \"id\": \"1\", \"isLeader\": true, \"hostname\": \"localhost\", \"port\": 3001, \"clientPort\": 4001 }",
-      "{ \"id\": \"2\", \"isLeader\": false, \"hostname\": \"localhost\", \"port\": 3002, \"clientPort\": 4002 }",
-      "{ \"id\": \"3\", \"isLeader\": false, \"hostname\": \"localhost\", \"port\": 3003, \"clientPort\": 4003 }",
-      "{ \"id\": \"4\", \"isLeader\": false, \"hostname\": \"localhost\", \"port\": 3004, \"clientPort\": 4004 }]");
+      "[{ \"id\": \"1\", \"isLeader\": true, \"hostname\": \"localhost\", \"port\": 3001, \"clientPort\": 4001, \"byzantineBehavior\": \"None\"}",
+      "{ \"id\": \"2\", \"isLeader\": false, \"hostname\": \"localhost\", \"port\": 3002, \"clientPort\": 4002, \"byzantineBehavior\": \"None\"}",
+      "{ \"id\": \"3\", \"isLeader\": false, \"hostname\": \"localhost\", \"port\": 3003, \"clientPort\": 4003, \"byzantineBehavior\": \"None\"}",
+      "{ \"id\": \"4\", \"isLeader\": false, \"hostname\": \"localhost\", \"port\": 3004, \"clientPort\": 4004, \"byzantineBehavior\": \"None\"}]");
 
   private String clientsConfigJson =
       String.join(",\n", "[{ \"id\": \"5\", \"hostname\": \"localhost\", \"port\": 3005 }]");
