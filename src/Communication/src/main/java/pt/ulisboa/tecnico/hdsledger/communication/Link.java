@@ -173,6 +173,8 @@ public class Link {
         byte[] buf = new Gson().toJson(signedMessage).getBytes();
         DatagramPacket packet = new DatagramPacket(buf, buf.length, hostname, port);
         socket.send(packet);
+      } catch (SocketException e) {
+        System.out.println("Shutting down...");
       } catch (IOException e) {
         e.printStackTrace();
         throw new HDSSException(ErrorMessage.SocketSendingError);
@@ -286,5 +288,9 @@ public class Link {
     }
 
     return message;
+  }
+
+  public void shutdown() {
+    socket.close();
   }
 }

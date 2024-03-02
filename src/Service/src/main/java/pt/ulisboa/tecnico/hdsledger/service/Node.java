@@ -43,7 +43,13 @@ public class Node {
     ProcessConfig[] nodeConfigs = ProcessConfigBuilder.fromFile(nodesConfigPath);
     ProcessConfig[] clientConfigs = ProcessConfigBuilder.fromFile(clientsConfigPath);
 
-    new Node(id, nodeConfigs, clientConfigs).start();
+    Node node = new Node(id, nodeConfigs, clientConfigs);
+    node.start();
+
+    // Wait for the user to terminate the program
+    System.out.println("Press enter to terminate the program.");
+    System.console().readLine();
+    node.shutdown();
   }
 
   public Node(String id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs) {
@@ -78,6 +84,11 @@ public class Node {
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  public void shutdown() {
+    nodeService.shutdown();
+    clientService.shutdown();
   }
 
   public NodeService getNodeService() {

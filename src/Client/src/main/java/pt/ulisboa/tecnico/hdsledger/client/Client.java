@@ -77,6 +77,7 @@ public class Client {
         case "exit" -> {
           System.out.println("Exiting...");
           scanner.close();
+          library.shutdown();
           System.exit(0);
         }
         default -> {
