@@ -17,6 +17,12 @@ public class ProcessConfig {
 
   private String privateKeyPath;
 
+  private ByzantineBehavior byzantineBehavior;
+
+  public enum ByzantineBehavior {
+    None, Drop,
+  }
+
   public boolean isLeader() {
     return isLeader;
   }
@@ -47,6 +53,10 @@ public class ProcessConfig {
 
   public String getPrivateKeyPath() {
     return privateKeyPath;
+  }
+
+  public ByzantineBehavior getByzantineBehavior() {
+    return byzantineBehavior;
   }
 
 }

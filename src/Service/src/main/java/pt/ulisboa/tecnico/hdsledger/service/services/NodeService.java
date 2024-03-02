@@ -25,6 +25,7 @@ import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
+import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
 
 public class NodeService implements UDPService {
 
@@ -357,6 +358,17 @@ public class NodeService implements UDPService {
               LOGGER.log(Level.INFO, MessageFormat.format("{0} - EXCEPTION: {1}",
                   this.config.getId(), e.getMessage()));
               continue;
+            }
+
+            // Switch statement on byzantine behavior
+            switch (config.getByzantineBehavior()) {
+              case None:
+                break;
+              case Drop:
+                LOGGER.log(Level.INFO, "Ignoring PRE-PREPARE message");
+                continue;
+              default:
+                throw new IllegalStateException();
             }
 
             // Separate thread to handle each message
