@@ -20,6 +20,7 @@ import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
+import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
 
 public class NodeService implements UDPService {
 
@@ -337,7 +338,15 @@ public class NodeService implements UDPService {
       new Thread(() -> {
         try {
           while (true) {
-            Message message = link.receive();
+            Message message;
+
+            try {
+              message = link.receive();
+            } catch (InvalidSignatureException e) {
+              LOGGER.log(Level.INFO, MessageFormat.format("{0} - EXCEPTION: {1}",
+                  this.config.getId(), e.getMessage()));
+              continue;
+            }
 
             // Separate thread to handle each message
             new Thread(() -> {

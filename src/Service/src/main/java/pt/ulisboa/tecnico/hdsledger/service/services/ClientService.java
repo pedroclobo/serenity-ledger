@@ -8,6 +8,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
+import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
 
 public class ClientService implements UDPService {
 
@@ -54,7 +55,15 @@ public class ClientService implements UDPService {
       new Thread(() -> {
         try {
           while (true) {
-            Message message = link.receive();
+            Message message;
+
+            try {
+              message = link.receive();
+            } catch (InvalidSignatureException e) {
+              LOGGER.log(Level.INFO, MessageFormat.format("{0} - EXCEPTION: {1}",
+                  this.config.getId(), e.getMessage()));
+              continue;
+            }
 
             // Each new message is handled by a new thread
             new Thread(() -> {
