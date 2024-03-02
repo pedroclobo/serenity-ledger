@@ -10,6 +10,8 @@ import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
+import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
+
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -93,6 +95,10 @@ public class Node {
 
   public NodeService getNodeService() {
     return nodeService;
+  }
+
+  public ByzantineBehavior getByzantineBehavior() {
+    return nodeService.getConfig().getByzantineBehavior();
   }
 
 }
