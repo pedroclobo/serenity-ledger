@@ -99,7 +99,7 @@ public class Library {
           LOGGER.log(Level.INFO, "{0} - EXCEPTION: {1}",
               new Object[] {clientConfig.getId(), e.getMessage()});
         } catch (SocketException e) {
-          System.out.println("Shutting down...");
+          // Supress message during shutdown
         } catch (IOException | ClassNotFoundException e) {
           e.printStackTrace();
         }

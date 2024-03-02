@@ -174,7 +174,7 @@ public class Link {
         DatagramPacket packet = new DatagramPacket(buf, buf.length, hostname, port);
         socket.send(packet);
       } catch (SocketException e) {
-        System.out.println("Shutting down...");
+        // Supress message during shutdown
       } catch (IOException e) {
         e.printStackTrace();
         throw new HDSSException(ErrorMessage.SocketSendingError);
