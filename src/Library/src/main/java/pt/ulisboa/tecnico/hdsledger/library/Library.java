@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.library;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.ConcurrentHashMap;
@@ -97,6 +98,8 @@ public class Library {
         } catch (HDSSException e) {
           LOGGER.log(Level.INFO, "{0} - EXCEPTION: {1}",
               new Object[] {clientConfig.getId(), e.getMessage()});
+        } catch (SocketException e) {
+          System.out.println("Shutting down...");
         } catch (IOException | ClassNotFoundException e) {
           e.printStackTrace();
         }
@@ -104,5 +107,9 @@ public class Library {
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  public void shutdown() {
+    link.shutdown();
   }
 }

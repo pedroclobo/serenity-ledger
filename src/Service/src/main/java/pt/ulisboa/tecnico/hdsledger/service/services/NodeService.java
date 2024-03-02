@@ -1,6 +1,8 @@
 package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
+import java.net.Socket;
+import java.net.SocketException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -387,6 +389,8 @@ public class NodeService implements UDPService {
 
             }).start();
           }
+        } catch (SocketException e) {
+          System.out.println("Shutting down...");
         } catch (IOException | ClassNotFoundException e) {
           e.printStackTrace();
         }
@@ -394,6 +398,10 @@ public class NodeService implements UDPService {
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  public void shutdown() {
+    link.shutdown();
   }
 
 }
