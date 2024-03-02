@@ -3,6 +3,8 @@ package pt.ulisboa.tecnico.hdsledger.communication;
 import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
+import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
+
 import java.io.IOException;
 import java.net.*;
 import java.security.InvalidKeyException;
@@ -158,23 +160,17 @@ public class Link {
    */
   public void unreliableSend(InetAddress hostname, int port, Message data) {
     new Thread(() -> {
-
-      String messageJson = new Gson().toJson(data);
-      Optional<String> signature = Optional.empty();
-
       try {
-        // Sign the message with the private key
-        signature = Optional.of(RSACryptography.sign(config.getPrivateKeyPath(), messageJson));
-      } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
-          | InvalidKeySpecException e) {
-        e.printStackTrace();
-        throw new HDSSException(ErrorMessage.SignatureError);
-      }
+        SignedMessage signedMessage = new SignedMessage(data);
+        try {
+          signedMessage.sign(config.getPrivateKeyPath());
+        } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
+            | InvalidKeySpecException e) {
+          e.printStackTrace();
+          throw new HDSSException(ErrorMessage.SigningError);
+        }
 
-      SignedMessage signedMessage = new SignedMessage(messageJson, signature.get());
-      byte[] buf = new Gson().toJson(signedMessage).getBytes();
-
-      try {
+        byte[] buf = new Gson().toJson(signedMessage).getBytes();
         DatagramPacket packet = new DatagramPacket(buf, buf.length, hostname, port);
         socket.send(packet);
       } catch (IOException e) {
@@ -187,9 +183,10 @@ public class Link {
   /*
    * Receives a message from any node in the network (blocking)
    */
-  public Message receive() throws IOException, ClassNotFoundException {
+  public Message receive() throws IOException, ClassNotFoundException, InvalidSignatureException {
 
     Message message = null;
+    SignedMessage signedMessage = null;
     String serialized = "";
     Boolean local = false;
     DatagramPacket response = null;
@@ -206,17 +203,19 @@ public class Link {
 
       byte[] buffer = Arrays.copyOfRange(response.getData(), 0, response.getLength());
       serialized = new String(buffer);
-      message = new Gson().fromJson(serialized, Message.class);
+      signedMessage = new Gson().fromJson(serialized, SignedMessage.class);
+      message = new Gson().fromJson(signedMessage.getMessageJson(), Message.class);
 
-      // Verify signature of the message
-      SignedMessage signedMessage = new Gson().fromJson(serialized, SignedMessage.class);
       try {
-        if (!RSACryptography.verify(nodes.get(message.getSenderId()).getPublicKeyPath(),
-            signedMessage.getMessage(), signedMessage.getSignature())) {
-          message.setType(Message.Type.IGNORE);
-          throw new HDSSException(ErrorMessage.InvalidSignature);
-        } 
-      } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+        if (!signedMessage.verify(nodes.get(message.getSenderId()).getPublicKeyPath())) {
+          LOGGER.log(Level.INFO,
+              MessageFormat.format("{0} - Message from {1} with ID {2} has invalid signature",
+                  config.getId(), message.getSenderId(), message.getMessageId()));
+
+          throw new InvalidSignatureException(ErrorMessage.InvalidSignature.getMessage());
+        }
+      } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
+          | InvalidKeySpecException e) {
         e.printStackTrace();
         throw new HDSSException(ErrorMessage.SignatureVerificationError);
       }
@@ -237,7 +236,7 @@ public class Link {
 
     // It's not an ACK -> Deserialize for the correct type
     if (!local)
-      message = new Gson().fromJson(serialized, this.messageClass);
+      message = new Gson().fromJson(signedMessage.getMessageJson(), this.messageClass);
 
     boolean isRepeated = !receivedMessages.get(message.getSenderId()).add(messageId);
     Type originalType = message.getType();

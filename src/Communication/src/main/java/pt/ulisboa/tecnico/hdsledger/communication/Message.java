@@ -2,6 +2,8 @@ package pt.ulisboa.tecnico.hdsledger.communication;
 
 import java.io.Serializable;
 
+import com.google.gson.Gson;
+
 public class Message implements Serializable {
 
   // Sender identifier
@@ -42,5 +44,15 @@ public class Message implements Serializable {
 
   public void setType(Type type) {
     this.type = type;
+  }
+
+  public String toJsonString() {
+    return new Gson().toJson(this);
+  }
+
+  @Override
+  public String toString() {
+    return "Message{" + "senderId='" + senderId + '\'' + ", messageId=" + messageId + ", type="
+        + type + '}';
   }
 }

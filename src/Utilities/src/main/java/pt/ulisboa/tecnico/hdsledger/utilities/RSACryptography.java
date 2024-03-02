@@ -44,21 +44,6 @@ public class RSACryptography {
     return factory.generatePrivate(spec);
   }
 
-  public static String base64EncodeKey(Key key) {
-    return Base64.getEncoder().encodeToString(key.getEncoded());
-  }
-
-  public static PublicKey base64DecodePublicKey(String key) {
-    byte[] keyBytes = Base64.getDecoder().decode(key);
-
-    try {
-      return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
-    } catch (Exception e) {
-      e.printStackTrace();
-      return null;
-    }
-  }
-
   public static String sign(String privateKeyPath, String data) throws InvalidKeyException,
       NoSuchAlgorithmException, SignatureException, InvalidKeySpecException {
     PrivateKey privateKey = readPrivateKey(privateKeyPath);

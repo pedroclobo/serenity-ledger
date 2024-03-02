@@ -9,6 +9,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
+import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
 
 public class Library {
 
@@ -32,7 +33,15 @@ public class Library {
       new Thread(() -> {
         try {
           while (true) {
-            Message message = link.receive();
+            Message message;
+
+            try {
+              message = link.receive();
+            } catch (InvalidSignatureException e) {
+              LOGGER.log(Level.INFO, "{0} - EXCEPTION: {1}",
+                  new Object[] {clientConfig.getId(), e.getMessage()});
+              continue;
+            }
 
             switch (message.getType()) {
               case APPEND -> {
