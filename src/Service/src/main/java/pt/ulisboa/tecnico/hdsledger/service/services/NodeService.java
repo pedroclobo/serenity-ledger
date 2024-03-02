@@ -390,7 +390,7 @@ public class NodeService implements UDPService {
             }).start();
           }
         } catch (SocketException e) {
-          System.out.println("Shutting down...");
+          // Supress message during shutdown
         } catch (IOException | ClassNotFoundException e) {
           e.printStackTrace();
         }
