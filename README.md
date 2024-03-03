@@ -97,3 +97,14 @@ Then, run the `Client` module.
 cd Client
 mvn compile exec:java -Dexec.args="5 regular_config.json client_config.json"
 ```
+
+
+### Testing
+
+Make sure you don't have any process running on the ports defined in the configuration files.
+
+To run the tests, use the following command:
+
+```
+mvn test
+```
