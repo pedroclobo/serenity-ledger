@@ -18,6 +18,10 @@ public class ProcessConfig {
 
   public ProcessConfig() {}
 
+  public int getN() {
+    return N;
+  }
+
   public void setN(int N) {
     this.N = N;
   }
