@@ -27,13 +27,13 @@ public class Link {
   // UDP Socket
   private final DatagramSocket socket;
   // Map of all nodes in the network
-  private final Map<String, ProcessConfig> nodes = new ConcurrentHashMap<>();
+  private final Map<Integer, ProcessConfig> nodes = new ConcurrentHashMap<>();
   // Reference to the node itself
   private final ProcessConfig config;
   // Class to deserialize messages to
   private final Class<? extends Message> messageClass;
   // Set of received messages from specific node (prevent duplicates)
-  private final Map<String, CollapsingSet> receivedMessages = new ConcurrentHashMap<>();
+  private final Map<Integer, CollapsingSet> receivedMessages = new ConcurrentHashMap<>();
   // Set of received ACKs from specific node
   private final CollapsingSet receivedAcks = new CollapsingSet();
   // Message counter
@@ -54,7 +54,7 @@ public class Link {
     this.BASE_SLEEP_TIME = baseSleepTime;
 
     Arrays.stream(nodes).forEach(node -> {
-      String id = node.getId();
+      int id = node.getId();
       this.nodes.put(id, node);
       receivedMessages.put(id, new CollapsingSet());
     });
@@ -91,7 +91,7 @@ public class Link {
    *
    * @param data The message to be sent
    */
-  public void send(String nodeId, Message data) {
+  public void send(int nodeId, Message data) {
 
     // Spawn a new thread to send the message
     // To avoid blocking while waiting for ACK
@@ -111,7 +111,7 @@ public class Link {
         int sleepTime = BASE_SLEEP_TIME;
 
         // Send message to local queue instead of using network if destination in self
-        if (nodeId.equals(this.config.getId())) {
+        if (nodeId == this.config.getId()) {
           this.localhostQueue.add(data);
 
           LOGGER.log(Level.INFO,
@@ -223,7 +223,7 @@ public class Link {
       }
     }
 
-    String senderId = message.getSenderId();
+    int senderId = message.getSenderId();
     int messageId = message.getMessageId();
 
     if (!nodes.containsKey(senderId))
@@ -257,16 +257,14 @@ public class Link {
       }
       case PREPARE -> {
         ConsensusMessage consensusMessage = (ConsensusMessage) message;
-        if (consensusMessage.getReplyTo() != null
-            && consensusMessage.getReplyTo().equals(config.getId()))
+        if (consensusMessage.getReplyTo() == config.getId())
           receivedAcks.add(consensusMessage.getReplyToMessageId());
 
         return message;
       }
       case COMMIT -> {
         ConsensusMessage consensusMessage = (ConsensusMessage) message;
-        if (consensusMessage.getReplyTo() != null
-            && consensusMessage.getReplyTo().equals(config.getId()))
+        if (consensusMessage.getReplyTo() == config.getId())
           receivedAcks.add(consensusMessage.getReplyToMessageId());
       }
       default -> {

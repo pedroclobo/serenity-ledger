@@ -34,7 +34,7 @@ public class Node {
       System.err.println("Usage: java Node <nodeId> <nodesConfigPath> <clientsConfigPath>");
       System.exit(1);
     }
-    String id = args[0];
+    int id = Integer.parseInt(args[0]);
     nodesConfigPath += args[1];
     clientsConfigPath += args[2];
 
@@ -54,18 +54,15 @@ public class Node {
     node.shutdown();
   }
 
-  public Node(String id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs) {
+  public Node(int id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs) {
     // Retrieve the current node's config and the leader's config
-    ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId().equals(id))
-        .findAny().orElseThrow(() -> new HDSSException(ErrorMessage.NoSuchNode));
-
-    ProcessConfig leaderConfig = Arrays.stream(nodeConfigs).filter(ProcessConfig::isLeader)
-        .findAny().orElseThrow(() -> new HDSSException(ErrorMessage.NoLeaderNode));
+    ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId() == id).findAny()
+        .orElseThrow(() -> new HDSSException(ErrorMessage.NoSuchNode));
 
     LOGGER.log(Level.INFO, MessageFormat.format(
         "Node with id {0} with node socket on <{1}:{2}> and client socket on <{3}:{4}> and leader={5}",
         nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
-        nodeConfig.getHostname(), nodeConfig.getClientPort(), nodeConfig.isLeader()));
+        nodeConfig.getHostname(), nodeConfig.getClientPort(), nodeConfig.isLeader(1, 1)));
 
     // Abstraction to send and receive messages
     linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs, ConsensusMessage.class);
@@ -73,10 +70,8 @@ public class Node {
         new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, AppendMessage.class);
 
     // Services that implement listen from UDPService
-    nodeService =
-        new NodeService(linkToNodes, linkToClients, nodeConfig, leaderConfig, nodeConfigs);
-    clientService =
-        new ClientService(linkToClients, nodeConfig, leaderConfig, nodeConfigs, nodeService);
+    nodeService = new NodeService(linkToNodes, linkToClients, nodeConfig, nodeConfigs);
+    clientService = new ClientService(linkToClients, nodeConfig, nodeConfigs, nodeService);
   }
 
   public void start() {

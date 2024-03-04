@@ -35,8 +35,6 @@ public class NodeService implements UDPService {
 
   // Current node is leader
   private final ProcessConfig config;
-  // Leader configuration
-  private final ProcessConfig leaderConfig;
 
   // Link to communicate with nodes
   private final Link link;
@@ -60,13 +58,12 @@ public class NodeService implements UDPService {
   // Ledger (for now, just a list of strings)
   private ArrayList<String> ledger = new ArrayList<String>();
 
-  public NodeService(Link link, Link clientLink, ProcessConfig config, ProcessConfig leaderConfig,
+  public NodeService(Link link, Link clientLink, ProcessConfig config,
       ProcessConfig[] nodesConfig) {
 
     this.link = link;
     this.clientLink = clientLink;
     this.config = config;
-    this.leaderConfig = leaderConfig;
     this.nodesConfig = nodesConfig;
 
     this.prepareMessages = new MessageBucket(nodesConfig.length);
@@ -85,8 +82,11 @@ public class NodeService implements UDPService {
     return this.ledger;
   }
 
-  private boolean isLeader(String id) {
-    return this.leaderConfig.getId().equals(id);
+  private boolean isLeader(int id) {
+    int consensusInstance = this.consensusInstance.get();
+    int round = instanceInfo.get(consensusInstance).getCurrentRound();
+
+    return nodesConfig[id - 1].isLeader(consensusInstance, round);
   }
 
   public ConsensusMessage createConsensusMessage(String value, int instance, int round) {
@@ -132,8 +132,8 @@ public class NodeService implements UDPService {
     }
 
     // Leader broadcasts PRE-PREPARE message
-    if (this.config.isLeader()) {
-      InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
+    InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
+    if (this.config.isLeader(localConsensusInstance, instance.getCurrentRound())) {
       LOGGER.log(Level.INFO, MessageFormat
           .format("{0} - Node is leader, sending PRE-PREPARE message", config.getId()));
       this.link.broadcast(
@@ -154,7 +154,7 @@ public class NodeService implements UDPService {
 
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
-    String senderId = message.getSenderId();
+    int senderId = message.getSenderId();
     int senderMessageId = message.getMessageId();
 
     PrePrepareMessage prePrepareMessage = message.deserializePrePrepareMessage();
@@ -204,7 +204,7 @@ public class NodeService implements UDPService {
 
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
-    String senderId = message.getSenderId();
+    int senderId = message.getSenderId();
 
     PrepareMessage prepareMessage = message.deserializePrepareMessage();
 
