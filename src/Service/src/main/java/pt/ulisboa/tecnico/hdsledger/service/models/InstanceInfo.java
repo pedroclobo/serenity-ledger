@@ -1,19 +1,25 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
+import java.util.Optional;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 
 public class InstanceInfo {
 
-  private int currentRound = 1;
-  private int preparedRound = -1;
-  private String preparedValue;
-  private CommitMessage commitMessage;
+  private int currentRound;
+  private Optional<Integer> preparedRound;
+  private Optional<String> preparedValue;
   private String inputValue;
-  private int committedRound = -1;
+  private Optional<CommitMessage> commitMessage;
+  private Optional<Integer> committedRound;
 
   public InstanceInfo(String inputValue) {
+    this.currentRound = 1;
+    this.preparedRound = Optional.empty();
+    this.preparedValue = Optional.empty();
     this.inputValue = inputValue;
+    this.commitMessage = Optional.empty();
+    this.committedRound = Optional.empty();
   }
 
   public int getCurrentRound() {
@@ -24,20 +30,20 @@ public class InstanceInfo {
     this.currentRound = currentRound;
   }
 
-  public int getPreparedRound() {
+  public Optional<Integer> getPreparedRound() {
     return preparedRound;
   }
 
   public void setPreparedRound(int preparedRound) {
-    this.preparedRound = preparedRound;
+    this.preparedRound = Optional.of(preparedRound);
   }
 
-  public String getPreparedValue() {
+  public Optional<String> getPreparedValue() {
     return preparedValue;
   }
 
   public void setPreparedValue(String preparedValue) {
-    this.preparedValue = preparedValue;
+    this.preparedValue = Optional.of(preparedValue);
   }
 
   public String getInputValue() {
@@ -48,19 +54,19 @@ public class InstanceInfo {
     this.inputValue = inputValue;
   }
 
-  public int getCommittedRound() {
-    return committedRound;
-  }
-
-  public void setCommittedRound(int committedRound) {
-    this.committedRound = committedRound;
-  }
-
-  public CommitMessage getCommitMessage() {
+  public Optional<CommitMessage> getCommitMessage() {
     return commitMessage;
   }
 
   public void setCommitMessage(CommitMessage commitMessage) {
-    this.commitMessage = commitMessage;
+    this.commitMessage = Optional.of(commitMessage);
+  }
+
+  public Optional<Integer> getCommittedRound() {
+    return committedRound;
+  }
+
+  public void setCommittedRound(int committedRound) {
+    this.committedRound = Optional.of(committedRound);
   }
 }

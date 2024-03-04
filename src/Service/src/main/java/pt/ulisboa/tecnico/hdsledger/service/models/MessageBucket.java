@@ -4,14 +4,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 
 public class MessageBucket {
 
   private static final CustomLogger LOGGER = new CustomLogger(MessageBucket.class.getName());
+  // f+1
+  private final int f_1;
   // Quorum size
   private final int quorumSize;
   // Instance -> Round -> Sender ID -> Consensus message
@@ -20,6 +24,7 @@ public class MessageBucket {
 
   public MessageBucket(int nodeCount) {
     int f = Math.floorDiv(nodeCount - 1, 3);
+    f_1 = f + 1;
     quorumSize = Math.floorDiv(nodeCount + f, 2) + 1;
   }
 
@@ -50,11 +55,9 @@ public class MessageBucket {
 
     // Only one value (if any, thus the optional) will have a frequency
     // greater than or equal to the quorum size
-    return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
-      return entry.getValue() >= quorumSize;
-    }).map((Map.Entry<String, Integer> entry) -> {
-      return entry.getKey();
-    }).findFirst();
+    return frequency.entrySet().stream()
+        .filter((Map.Entry<String, Integer> entry) -> entry.getValue() >= quorumSize)
+        .map((Map.Entry<String, Integer> entry) -> entry.getKey()).findFirst();
   }
 
   public Optional<String> hasValidCommitQuorum(int nodeId, int instance, int round) {
@@ -68,11 +71,42 @@ public class MessageBucket {
 
     // Only one value (if any, thus the optional) will have a frequency
     // greater than or equal to the quorum size
-    return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
-      return entry.getValue() >= quorumSize;
-    }).map((Map.Entry<String, Integer> entry) -> {
-      return entry.getKey();
-    }).findFirst();
+    return frequency.entrySet().stream()
+        .filter((Map.Entry<String, Integer> entry) -> entry.getValue() >= quorumSize)
+        .map((Map.Entry<String, Integer> entry) -> entry.getKey()).findFirst();
+  }
+
+  // Return the minimum round change value in the set
+  // Makes sure the number of round change messages is greater than f+1
+  public Optional<Integer> hasValidRoundChangeSet(int instance, int round) {
+    if (bucket.get(instance).get(round).size() < f_1) {
+      return Optional.empty();
+    }
+    return bucket.get(instance).get(round).values().stream().map((message) -> message.getRound())
+        .min(Integer::compareTo);
+  }
+
+  public Pair<Boolean, Optional<Pair<Integer, String>>> hasValidRoundChangeQuorum(int instance,
+      int round) {
+    if (bucket.get(instance) == null || bucket.get(instance).get(round) == null
+        || bucket.get(instance).get(round).size() < quorumSize) {
+      return new Pair<>(false, Optional.empty());
+    }
+
+    Optional<Integer> highestPrepared = bucket.get(instance).get(round).values().stream()
+        .map((message) -> message.deserializeRoundChangeMessage().getPreparedRound())
+        .filter(Optional::isPresent).map(Optional::get).max(Integer::compareTo);
+
+    if (highestPrepared.isEmpty()) {
+      return new Pair<>(true, Optional.empty());
+    }
+
+    String highestPreparedValue = bucket.get(instance).get(round).values().stream()
+        .map((message) -> message.deserializeRoundChangeMessage())
+        .filter((roundChangeMessage) -> roundChangeMessage.getPreparedRound() == highestPrepared)
+        .map((roundChangeMessage) -> roundChangeMessage.getPreparedValue().get()).findFirst().get();
+
+    return new Pair<>(true, Optional.of(new Pair<>(highestPrepared.get(), highestPreparedValue)));
   }
 
   public Map<Integer, ConsensusMessage> getMessages(int instance, int round) {

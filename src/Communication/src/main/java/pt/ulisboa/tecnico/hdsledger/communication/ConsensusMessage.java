@@ -1,6 +1,9 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import pt.ulisboa.tecnico.hdsledger.utilities.OptionalTypeAdapter;
 
 public class ConsensusMessage extends Message {
 
@@ -32,7 +35,10 @@ public class ConsensusMessage extends Message {
   }
 
   public RoundChangeMessage deserializeRoundChangeMessage() {
-    return new Gson().fromJson(this.message, RoundChangeMessage.class);
+    GsonBuilder gsonBuilder = new GsonBuilder();
+    gsonBuilder.registerTypeAdapterFactory(OptionalTypeAdapter.FACTORY);
+    Gson gson = gsonBuilder.create();
+    return gson.fromJson(this.message, RoundChangeMessage.class);
   }
 
   public String getMessage() {
