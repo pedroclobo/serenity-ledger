@@ -22,7 +22,7 @@ public class Client {
       System.exit(1);
     }
 
-    String clientId = args[0];
+    int clientId = Integer.parseInt(args[0]);
     nodesConfigPath += args[1];
     clientsConfigPath += args[2];
     boolean activateLogs = false;
@@ -41,9 +41,8 @@ public class Client {
     }
 
     // Retrieve the current client's config
-    ProcessConfig clientConfig =
-        Arrays.stream(clientConfigs).filter(c -> c.getId().equals(clientId)).findFirst()
-            .orElseThrow(() -> new HDSSException(ErrorMessage.ConfigFileNotFound));
+    ProcessConfig clientConfig = Arrays.stream(clientConfigs).filter(c -> c.getId() == clientId)
+        .findFirst().orElseThrow(() -> new HDSSException(ErrorMessage.ConfigFileNotFound));
 
     // The library is responsible for translating client's requests into
     // messages and sending them to the server

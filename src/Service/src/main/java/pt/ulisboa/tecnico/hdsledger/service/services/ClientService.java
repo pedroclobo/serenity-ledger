@@ -18,29 +18,22 @@ public class ClientService implements UDPService {
   private final ProcessConfig[] clientConfigs;
   // Node configuration
   private final ProcessConfig config;
-  // Leader configuration
-  private final ProcessConfig leaderConfig;
   // Link to communicate with nodes
   private final Link link;
   // Node service
   private final NodeService nodeService;
 
-  public ClientService(Link link, ProcessConfig config, ProcessConfig leaderConfig,
-      ProcessConfig[] clientConfigs, NodeService nodeService) {
+  public ClientService(Link link, ProcessConfig config, ProcessConfig[] clientConfigs,
+      NodeService nodeService) {
 
     this.link = link;
     this.config = config;
-    this.leaderConfig = leaderConfig;
     this.clientConfigs = clientConfigs;
     this.nodeService = nodeService;
   }
 
   public ProcessConfig getConfig() {
     return this.config;
-  }
-
-  private boolean isLeader(String id) {
-    return this.leaderConfig.getId().equals(id);
   }
 
   public void append(AppendMessage message) {

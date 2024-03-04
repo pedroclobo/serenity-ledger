@@ -1,30 +1,33 @@
 package pt.ulisboa.tecnico.hdsledger.utilities;
 
 public class ProcessConfig {
-  public ProcessConfig() {}
-
-  private boolean isLeader;
-
-  private String hostname;
-
-  private String id;
-
-  private int port;
-
-  private int clientPort;
-
-  private String publicKeyPath;
-
-  private String privateKeyPath;
-
-  private ByzantineBehavior byzantineBehavior;
 
   public enum ByzantineBehavior {
     None, Drop,
   }
 
-  public boolean isLeader() {
-    return isLeader;
+  private int N;
+
+  private int id;
+  private String hostname;
+  private int port;
+  private int clientPort;
+  private String publicKeyPath;
+  private String privateKeyPath;
+  private ByzantineBehavior byzantineBehavior;
+
+  public ProcessConfig() {}
+
+  public void setN(int N) {
+    this.N = N;
+  }
+
+  public int getId() {
+    return id;
+  }
+
+  public String getHostname() {
+    return hostname;
   }
 
   public int getPort() {
@@ -39,14 +42,6 @@ public class ProcessConfig {
     return clientPort;
   }
 
-  public String getId() {
-    return id;
-  }
-
-  public String getHostname() {
-    return hostname;
-  }
-
   public String getPublicKeyPath() {
     return publicKeyPath;
   }
@@ -57,6 +52,19 @@ public class ProcessConfig {
 
   public ByzantineBehavior getByzantineBehavior() {
     return byzantineBehavior;
+  }
+
+  public boolean isLeader(int consensusInstance, int round) {
+    if (round == 1) {
+      return id == 1;
+    } else if (round == 2) {
+      return id == 2;
+    } else if (round == 3) {
+      return id == 3;
+    } else if (round == 4) {
+      return id == 4;
+    }
+    return isLeader(consensusInstance, round - 4);
   }
 
 }

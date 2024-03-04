@@ -1,6 +1,6 @@
 [
     {
-        "id": "5",
+        "id": 5,
         "hostname": "localhost",
         "port": 3005,
         "publicKeyPath": "../PKI/src/main/resources/keys/client5.pub",

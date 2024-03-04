@@ -23,7 +23,12 @@ public class ProcessConfigBuilder {
 
   public static ProcessConfig[] fromJson(String json) {
     Gson gson = new Gson();
-    return gson.fromJson(json, ProcessConfig[].class);
+    ProcessConfig[] configs = gson.fromJson(json, ProcessConfig[].class);
+    int n = configs.length;
+    for (ProcessConfig config : configs) {
+      config.setN(n);
+    }
+    return configs;
   }
 
 }

@@ -15,7 +15,7 @@ public class MessageBucket {
   // Quorum size
   private final int quorumSize;
   // Instance -> Round -> Sender ID -> Consensus message
-  private final Map<Integer, Map<Integer, Map<String, ConsensusMessage>>> bucket =
+  private final Map<Integer, Map<Integer, Map<Integer, ConsensusMessage>>> bucket =
       new ConcurrentHashMap<>();
 
   public MessageBucket(int nodeCount) {
@@ -39,7 +39,7 @@ public class MessageBucket {
     bucket.get(consensusInstance).get(round).put(message.getSenderId(), message);
   }
 
-  public Optional<String> hasValidPrepareQuorum(String nodeId, int instance, int round) {
+  public Optional<String> hasValidPrepareQuorum(int nodeId, int instance, int round) {
     // Create mapping of value to frequency
     HashMap<String, Integer> frequency = new HashMap<>();
     bucket.get(instance).get(round).values().forEach((message) -> {
@@ -57,7 +57,7 @@ public class MessageBucket {
     }).findFirst();
   }
 
-  public Optional<String> hasValidCommitQuorum(String nodeId, int instance, int round) {
+  public Optional<String> hasValidCommitQuorum(int nodeId, int instance, int round) {
     // Create mapping of value to frequency
     HashMap<String, Integer> frequency = new HashMap<>();
     bucket.get(instance).get(round).values().forEach((message) -> {
@@ -75,7 +75,7 @@ public class MessageBucket {
     }).findFirst();
   }
 
-  public Map<String, ConsensusMessage> getMessages(int instance, int round) {
+  public Map<Integer, ConsensusMessage> getMessages(int instance, int round) {
     return bucket.get(instance).get(round);
   }
 }

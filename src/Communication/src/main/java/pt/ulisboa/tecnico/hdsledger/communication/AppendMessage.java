@@ -6,7 +6,7 @@ public class AppendMessage extends Message {
 
   private String value;
 
-  public AppendMessage(String senderId, Type type, String value) {
+  public AppendMessage(int senderId, Type type, String value) {
     super(senderId, type);
     this.value = value;
   }
