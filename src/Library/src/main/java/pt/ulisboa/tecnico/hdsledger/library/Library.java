@@ -39,7 +39,7 @@ public class Library {
       acks.put(value, latch);
     }
 
-    link.broadcast(message);
+    link.smallMulticast(message);
     listen();
 
     // Wait for the reply of a quorum of nodes
