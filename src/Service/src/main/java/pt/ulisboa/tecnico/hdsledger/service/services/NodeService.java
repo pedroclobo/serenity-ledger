@@ -176,7 +176,8 @@ public class NodeService implements UDPService {
 
     // Leader broadcasts PRE-PREPARE message
     InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
-    if (this.config.isLeader(localConsensusInstance, instance.getCurrentRound())) {
+    if (this.config.isLeader(localConsensusInstance, instance.getCurrentRound())
+        || this.config.getByzantineBehavior() == ProcessConfig.ByzantineBehavior.FakeLeader) {
       LOGGER.log(Level.INFO, "I'm the leader, sending PRE-PREPARE");
       this.link.broadcast(
           this.createConsensusMessage(value, localConsensusInstance, instance.getCurrentRound()));
@@ -453,7 +454,7 @@ public class NodeService implements UDPService {
     }
   }
 
-  void uponRoundChange(ConsensusMessage message) {
+  public void uponRoundChange(ConsensusMessage message) {
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
     int senderId = message.getSenderId();
@@ -490,7 +491,8 @@ public class NodeService implements UDPService {
     Boolean hasQuorum = a.getFirst();
     Optional<Pair<Integer, String>> highestPrepared = a.getSecond();
 
-    if (this.config.isLeader(consensusInstance, round) && hasQuorum) {
+    if ((this.config.isLeader(consensusInstance, round)
+        || this.config.getByzantineBehavior() == ByzantineBehavior.FakeLeader) && hasQuorum) {
       InstanceInfo instance = instanceInfo.get(consensusInstance);
       int highestPreparedRound = instance.getCurrentRound();
       String highestPreparedValue = instance.getInputValue();
@@ -586,15 +588,10 @@ public class NodeService implements UDPService {
               continue;
             }
 
-            // Switch statement on byzantine behavior
-            switch (config.getByzantineBehavior()) {
-              case None:
-                break;
-              case Drop:
-                LOGGER.log(Level.INFO, "Ignoring PRE-PREPARE message");
-                continue;
-              default:
-                throw new IllegalStateException();
+            // Byzantine Tests
+            if (config.getByzantineBehavior() == ByzantineBehavior.Drop) {
+              LOGGER.log(Level.INFO, "Dropping message");
+              continue;
             }
 
             // Separate thread to handle each message
