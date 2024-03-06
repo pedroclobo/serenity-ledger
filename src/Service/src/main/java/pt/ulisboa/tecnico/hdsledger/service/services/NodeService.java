@@ -13,6 +13,7 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
@@ -70,6 +71,8 @@ public class NodeService implements UDPService {
   // Store if already received quorum of 2f+1 round change messages for a given <consensus, round>
   private final Map<Integer, Map<Integer, Boolean>> receivedRoundChangeQuorum =
       new ConcurrentHashMap<>();
+  // Keep track of already started consensus instances
+  private final Set<Integer> setupConsensus = ConcurrentHashMap.newKeySet();
 
   // Ledger (for now, just a list of strings)
   private ArrayList<String> ledger = new ArrayList<String>();
@@ -150,8 +153,18 @@ public class NodeService implements UDPService {
    *
    * @param inputValue Value to value agreed upon
    */
-  public void startConsensus(String value) {
+  public void setupConsensus(String value, int consensusInstance) {
 
+    if (setupConsensus.contains(consensusInstance)) {
+      LOGGER.log(Level.INFO, MessageFormat.format("Consensus instance {0} already started",
+          currentConsensusInstance.get()));
+      return;
+    }
+
+    startConsensus(value);
+  }
+
+  public void startConsensus(String value) {
     // Set initial consensus values
     int localConsensusInstance = this.currentConsensusInstance.incrementAndGet();
     InstanceInfo existingConsensus =
@@ -167,6 +180,7 @@ public class NodeService implements UDPService {
     // Only start a consensus instance if the last one was decided
     // We need to be sure that the previous value has been decided
     while (lastDecidedConsensusInstance.get() < localConsensusInstance - 1) {
+      LOGGER.log(Level.INFO, "Waiting for last consensus instance to be decided");
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
@@ -184,6 +198,8 @@ public class NodeService implements UDPService {
     } else {
       LOGGER.log(Level.INFO, "I'm not the leader, waiting for PRE-PREPARE");
     }
+
+    setupConsensus.add(localConsensusInstance);
 
     restartTimer();
   }
@@ -239,14 +255,23 @@ public class NodeService implements UDPService {
         "Received PRE-PREPARE message from {0} Consensus Instance {1}, Round {2} with value {3}",
         senderId, consensusInstance, round, value));
 
+    // Set instance value
+    if (!setupConsensus.contains(consensusInstance)) {
+      setupConsensus(value, consensusInstance);
+    }
+
+    // this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value));
+
+    // int consensusInstance = this.currentConsensusInstance.get();
+    // int round = instanceInfo.get(consensusInstance).getCurrentRound();
+
+    // return nodesConfig[id - 1].isLeader(consensusInstance, round);
+
     // Justify pre-prepare
     if (!(isLeader(senderId) && justifyPrePrepare())) {
       LOGGER.log(Level.INFO, "Unjustified PRE-PREPARE");
       return;
     }
-
-    // Set instance value
-    this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value));
 
     // Within an instance of the algorithm,
     // each upon rule is triggered at most once for any round r
