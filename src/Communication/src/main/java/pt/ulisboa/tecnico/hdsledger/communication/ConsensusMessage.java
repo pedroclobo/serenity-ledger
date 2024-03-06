@@ -41,6 +41,13 @@ public class ConsensusMessage extends Message {
     return gson.fromJson(this.message, RoundChangeMessage.class);
   }
 
+  public CommitQuorumMessage deserializeCommitQuorumMessage() {
+    GsonBuilder gsonBuilder = new GsonBuilder();
+    gsonBuilder.registerTypeAdapterFactory(OptionalTypeAdapter.FACTORY);
+    Gson gson = gsonBuilder.create();
+    return gson.fromJson(this.message, CommitQuorumMessage.class);
+  }
+
   public String getMessage() {
     return message;
   }

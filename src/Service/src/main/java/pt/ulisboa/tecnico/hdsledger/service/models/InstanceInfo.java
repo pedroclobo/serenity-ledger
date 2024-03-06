@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
 import java.util.Optional;
+import java.util.Set;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 
@@ -12,6 +13,7 @@ public class InstanceInfo {
   private String inputValue;
   private Optional<CommitMessage> commitMessage;
   private Optional<Integer> committedRound;
+  private Optional<Set<CommitMessage>> commitQuorum;
 
   public InstanceInfo(String inputValue) {
     this.currentRound = 1;
@@ -20,6 +22,7 @@ public class InstanceInfo {
     this.inputValue = inputValue;
     this.commitMessage = Optional.empty();
     this.committedRound = Optional.empty();
+    this.commitQuorum = Optional.empty();
   }
 
   public int getCurrentRound() {
@@ -68,5 +71,13 @@ public class InstanceInfo {
 
   public void setCommittedRound(int committedRound) {
     this.committedRound = Optional.of(committedRound);
+  }
+
+  public Optional<Set<CommitMessage>> getCommitQuorum() {
+    return commitQuorum;
+  }
+
+  public void setCommitQuorum(Set<CommitMessage> commitQuorum) {
+    this.commitQuorum = Optional.of(commitQuorum);
   }
 }

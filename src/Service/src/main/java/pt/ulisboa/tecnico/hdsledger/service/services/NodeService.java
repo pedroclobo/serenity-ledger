@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,6 +16,7 @@ import java.util.logging.Level;
 
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.CommitQuorumMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
@@ -298,6 +300,7 @@ public class NodeService implements UDPService {
     // each upon rule is triggered at most once for any round r.
     // Late prepare (consensus already ended for other nodes) only reply to him (as
     // an ACK)
+    // TODO: is this necessary? we already have a commit quorum message
     if (instance.getPreparedRound().isPresent() && instance.getPreparedRound().get() >= round) {
       LOGGER.log(Level.INFO,
           MessageFormat.format(
@@ -352,7 +355,6 @@ public class NodeService implements UDPService {
 
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
-    String value = commitMessage.getValue();
 
     LOGGER.log(Level.INFO,
         MessageFormat.format("Received COMMIT message from {0}: Consensus Instance {1}, Round {2}",
@@ -380,42 +382,50 @@ public class NodeService implements UDPService {
       return;
     }
 
-    Optional<String> commitValue =
+    Pair<Boolean, Optional<Set<CommitMessage>>> a =
         commitMessages.hasValidCommitQuorum(config.getId(), consensusInstance, round);
+    Boolean hasQuorum = a.getFirst();
 
-    if (commitValue.isPresent()) {
+    if (hasQuorum) {
+
+      Set<CommitMessage> commitQuorum = a.getSecond().get();
 
       stopTimer();
 
       instance = this.instanceInfo.get(consensusInstance);
       instance.setCommittedRound(round);
+      instance.setCommitQuorum(commitQuorum);
 
-      // Append value to the ledger (must be synchronized to be thread-safe)
-      synchronized (ledger) {
+      String value = commitQuorum.iterator().next().getValue();
 
-        // Increment size of ledger to accommodate current instance
-        ledger.ensureCapacity(consensusInstance);
-        while (ledger.size() < consensusInstance - 1) {
-          ledger.add("");
-        }
-
-        ledger.add(consensusInstance - 1, value);
-
-        LOGGER.log(Level.INFO, MessageFormat.format("{0} - Current Ledger: {1}", config.getId(),
-            String.join("", ledger)));
-      }
-
-      lastDecidedConsensusInstance.getAndIncrement();
-
-      LOGGER.log(Level.INFO,
-          MessageFormat.format(
-              "{0} - Decided on Consensus Instance {1}, Round {2}, Successful? {3}", config.getId(),
-              consensusInstance, round, true));
+      decide(consensusInstance, round, value);
 
       // Notify clients
       Message messageToClient = new AppendMessage(config.getId(), Message.Type.APPEND, value);
       clientLink.broadcast(messageToClient);
     }
+  }
+
+  private void decide(int consensusInstance, int round, String value) {
+    synchronized (ledger) {
+
+      // Increment size of ledger to accommodate current instance
+      ledger.ensureCapacity(consensusInstance);
+      while (ledger.size() < consensusInstance - 1) {
+        ledger.add("");
+      }
+
+      ledger.add(consensusInstance - 1, value);
+
+      LOGGER.log(Level.INFO, MessageFormat.format("{0} - Current Ledger: {1}", config.getId(),
+          String.join("", ledger)));
+    }
+
+    lastDecidedConsensusInstance.getAndIncrement();
+
+    LOGGER.log(Level.INFO,
+        MessageFormat.format("{0} - Decided on Consensus Instance {1}, Round {2}, Successful? {3}",
+            config.getId(), consensusInstance, round, true));
   }
 
   public void startRoundChange() {
@@ -446,6 +456,7 @@ public class NodeService implements UDPService {
   void uponRoundChange(ConsensusMessage message) {
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
+    int senderId = message.getSenderId();
 
     LOGGER.log(Level.INFO,
         MessageFormat.format(
@@ -460,7 +471,16 @@ public class NodeService implements UDPService {
               "Received ROUND_CHANGE message for old consensus instance {0}, sending commit",
               consensusInstance));
 
-      // TODO: send quorum of commits
+      CommitQuorumMessage commitQuorumMessage =
+          new CommitQuorumMessage(instanceInfo.get(consensusInstance).getCommitQuorum().get());
+
+      ConsensusMessage consensusMessage =
+          new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT_QUORUM)
+              .setConsensusInstance(consensusInstance).setRound(round)
+              .setMessage(commitQuorumMessage.toJson()).build();
+
+      this.link.send(senderId, consensusMessage);
+
       return;
     }
 
@@ -536,6 +556,19 @@ public class NodeService implements UDPService {
     }
   }
 
+  public void uponCommitQuorum(ConsensusMessage message) {
+    LOGGER.log(Level.INFO, "Received COMMIT_QUORUM message");
+
+    CommitQuorumMessage commitQuorumMessage = message.deserializeCommitQuorumMessage();
+    int consensusInstance = message.getConsensusInstance();
+    int round = message.getRound();
+    String value = commitQuorumMessage.getQuorum().iterator().next().getValue();
+
+    // TODO: verify validity of message as this can be forged by a byzantine process
+
+    decide(consensusInstance, round, value);
+  }
+
   @Override
   public void listen() {
     try {
@@ -579,6 +612,9 @@ public class NodeService implements UDPService {
 
 
                 case ROUND_CHANGE -> uponRoundChange((ConsensusMessage) message);
+
+
+                case COMMIT_QUORUM -> uponCommitQuorum((ConsensusMessage) message);
 
                 case ACK ->
                   LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received ACK message from {1}",

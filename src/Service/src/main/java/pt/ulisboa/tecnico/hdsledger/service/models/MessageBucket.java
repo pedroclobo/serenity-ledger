@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
@@ -60,20 +61,29 @@ public class MessageBucket {
         .map((Map.Entry<String, Integer> entry) -> entry.getKey()).findFirst();
   }
 
-  public Optional<String> hasValidCommitQuorum(int nodeId, int instance, int round) {
+  public Pair<Boolean, Optional<Set<CommitMessage>>> hasValidCommitQuorum(int nodeId, int instance,
+      int round) {
     // Create mapping of value to frequency
     HashMap<String, Integer> frequency = new HashMap<>();
+    HashMap<String, Set<CommitMessage>> commitQuorum = new HashMap<>();
     bucket.get(instance).get(round).values().forEach((message) -> {
       CommitMessage commitMessage = message.deserializeCommitMessage();
       String value = commitMessage.getValue();
       frequency.put(value, frequency.getOrDefault(value, 0) + 1);
+      commitQuorum.putIfAbsent(value, ConcurrentHashMap.newKeySet());
+      commitQuorum.get(value).add(commitMessage);
     });
 
     // Only one value (if any, thus the optional) will have a frequency
     // greater than or equal to the quorum size
-    return frequency.entrySet().stream()
+    Optional<String> value = frequency.entrySet().stream()
         .filter((Map.Entry<String, Integer> entry) -> entry.getValue() >= quorumSize)
         .map((Map.Entry<String, Integer> entry) -> entry.getKey()).findFirst();
+
+    if (value.isEmpty()) {
+      return new Pair<>(false, Optional.empty());
+    }
+    return new Pair<>(true, Optional.of(commitQuorum.get(value.get())));
   }
 
   // Return the minimum round change value in the set
