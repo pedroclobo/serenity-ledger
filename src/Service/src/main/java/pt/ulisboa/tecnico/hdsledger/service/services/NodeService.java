@@ -380,9 +380,7 @@ public class NodeService implements UDPService {
    * @param message Message to be handled
    */
   public synchronized void uponCommit(ConsensusMessage message) {
-    CommitMessage commitMessage = message.deserializeCommitMessage();
     int senderId = message.getSenderId();
-
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
 
@@ -589,16 +587,24 @@ public class NodeService implements UDPService {
     }
   }
 
+  // TODO: verify validity of message as this can be forged by a byzantine process
   public void uponCommitQuorum(ConsensusMessage message) {
-    logger.info(MessageFormat.format("[{0}]: Received COMMIT_QUORUM message", config.getId()));
-
     CommitQuorumMessage commitQuorumMessage = message.deserializeCommitQuorumMessage();
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
     String value = commitQuorumMessage.getQuorum().iterator().next().getValue();
 
-    // TODO: verify validity of message as this can be forged by a byzantine process
+    if (consensusInstance <= lastDecidedConsensusInstance.get()) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Received COMMIT_QUORUM message for already decided consensus instance {1}, ignoring",
+          config.getId(), consensusInstance));
+      return;
+    }
 
+    logger.info(MessageFormat.format("[{0}]: Received COMMIT_QUORUM for (λ, r) = ({1}, {2})",
+        config.getId(), consensusInstance, round));
+
+    stopTimer();
     decide(consensusInstance, round, value);
   }
 
