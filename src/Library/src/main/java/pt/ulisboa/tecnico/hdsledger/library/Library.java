@@ -2,6 +2,10 @@ package pt.ulisboa.tecnico.hdsledger.library;
 
 import java.io.IOException;
 import java.net.SocketException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -12,6 +16,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
+import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
@@ -36,6 +41,14 @@ public class Library {
 
   public void append(String value) {
     Message message = new AppendMessage(clientConfig.getId(), Type.APPEND, value);
+
+    try {
+      ((AppendMessage) message).signValue(clientConfig.getPrivateKeyPath());
+    } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
+        | InvalidKeySpecException e) {
+      throw new HDSSException(ErrorMessage.SigningError);
+    }
+
     CountDownLatch latch = new CountDownLatch(quorumSize);
 
     synchronized (acks) {

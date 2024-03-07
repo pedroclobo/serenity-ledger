@@ -40,7 +40,8 @@ public class ClientService implements UDPService {
   public void append(AppendMessage message) {
     logger.info(MessageFormat.format("{0} - Received Append Message from {1}", this.config.getId(),
         message.getSenderId()));
-    nodeService.startConsensus(message.getValue());
+    nodeService.startConsensus(message.getValue(), message.getSenderId(),
+        message.getValueSignature());
   }
 
   @Override

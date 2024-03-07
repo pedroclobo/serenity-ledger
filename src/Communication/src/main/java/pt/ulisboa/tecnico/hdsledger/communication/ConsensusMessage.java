@@ -1,9 +1,13 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import pt.ulisboa.tecnico.hdsledger.utilities.OptionalTypeAdapter;
+import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class ConsensusMessage extends Message {
 
@@ -17,6 +21,10 @@ public class ConsensusMessage extends Message {
   private int replyToMessageId;
   // Message (PREPREPARE, PREPARE, COMMIT)
   private String message;
+  // Signature of the value
+  private String valueSignature;
+  // Client id
+  private int clientId;
 
   public ConsensusMessage(int senderId, Type type) {
     super(senderId, type);
@@ -86,5 +94,26 @@ public class ConsensusMessage extends Message {
 
   public void setReplyToMessageId(int replyToMessageId) {
     this.replyToMessageId = replyToMessageId;
+  }
+
+  public String getValueSignature() {
+    return valueSignature;
+  }
+
+  public void setValueSignature(String valueSignature) {
+    this.valueSignature = valueSignature;
+  }
+
+  public int getClientId() {
+    return clientId;
+  }
+
+  public void setClientId(int clientId) {
+    this.clientId = clientId;
+  }
+
+  public boolean verifyValueSignature(String publicKeyPath, String value)
+      throws InvalidKeySpecException, NoSuchAlgorithmException {
+    return RSACryptography.verify(publicKeyPath, value, this.valueSignature);
   }
 }

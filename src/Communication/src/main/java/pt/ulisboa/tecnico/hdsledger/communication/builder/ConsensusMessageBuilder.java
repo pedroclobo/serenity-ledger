@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.communication.builder;
 
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
+import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
 
 public class ConsensusMessageBuilder {
   private final ConsensusMessage instance;
@@ -32,6 +33,16 @@ public class ConsensusMessageBuilder {
 
   public ConsensusMessageBuilder setReplyToMessageId(int replyToMessageId) {
     instance.setReplyToMessageId(replyToMessageId);
+    return this;
+  }
+
+  public ConsensusMessageBuilder setValueSignature(String valueSignature) {
+    instance.setValueSignature(valueSignature);
+    return this;
+  }
+
+  public ConsensusMessageBuilder setClientId(int clientId) {
+    instance.setClientId(clientId);
     return this;
   }
 
