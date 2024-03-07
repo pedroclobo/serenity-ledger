@@ -1,9 +1,12 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Optional;
 import java.util.Set;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
+import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class InstanceInfo {
 
@@ -14,8 +17,10 @@ public class InstanceInfo {
   private Optional<CommitMessage> commitMessage;
   private Optional<Integer> committedRound;
   private Optional<Set<CommitMessage>> commitQuorum;
+  private String valueSignature;
+  private int clientId;
 
-  public InstanceInfo(String inputValue) {
+  public InstanceInfo(String inputValue, int clientId, String valueSignature) {
     this.currentRound = 1;
     this.preparedRound = Optional.empty();
     this.preparedValue = Optional.empty();
@@ -23,6 +28,8 @@ public class InstanceInfo {
     this.commitMessage = Optional.empty();
     this.committedRound = Optional.empty();
     this.commitQuorum = Optional.empty();
+    this.valueSignature = valueSignature;
+    this.clientId = clientId;
   }
 
   public int getCurrentRound() {
@@ -79,5 +86,18 @@ public class InstanceInfo {
 
   public void setCommitQuorum(Set<CommitMessage> commitQuorum) {
     this.commitQuorum = Optional.of(commitQuorum);
+  }
+
+  public String getValueSignature() {
+    return valueSignature;
+  }
+
+  public int getClientId() {
+    return clientId;
+  }
+
+  public boolean verifyValueSignature(String publicKeyPath, String value)
+      throws InvalidKeySpecException, NoSuchAlgorithmException {
+    return RSACryptography.verify(publicKeyPath, value, this.valueSignature);
   }
 }

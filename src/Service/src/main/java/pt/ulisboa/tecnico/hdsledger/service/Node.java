@@ -68,7 +68,8 @@ public class Node {
         new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, AppendMessage.class);
 
     // Services that implement listen from UDPService
-    nodeService = new NodeService(linkToNodes, linkToClients, nodeConfig, nodeConfigs, debug);
+    nodeService =
+        new NodeService(linkToNodes, linkToClients, nodeConfig, nodeConfigs, clientConfigs, debug);
     clientService = new ClientService(linkToClients, nodeConfig, nodeConfigs, nodeService, debug);
   }
 
