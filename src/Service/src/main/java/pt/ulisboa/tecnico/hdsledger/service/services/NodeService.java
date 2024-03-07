@@ -115,14 +115,6 @@ public class NodeService implements UDPService {
     return this.config;
   }
 
-  public int getCurrentConsensusInstance() {
-    return this.currentConsensusInstance.get();
-  }
-
-  public int getCurrentRound() {
-    return this.instanceInfo.get(this.currentConsensusInstance.get()).getCurrentRound();
-  }
-
   public ArrayList<String> getLedger() {
     return this.ledger;
   }
@@ -236,8 +228,8 @@ public class NodeService implements UDPService {
   }
 
   private synchronized boolean justifyPrePrepare() {
-    int consensusInstance = getCurrentConsensusInstance();
-    int round = getCurrentRound();
+    int consensusInstance = this.currentConsensusInstance.get();
+    int round = this.instanceInfo.get(this.currentConsensusInstance.get()).getCurrentRound();
 
     Pair<Boolean, Optional<Pair<Integer, String>>> a =
         roundChangeMessages.hasValidRoundChangeQuorum(consensusInstance, round);
