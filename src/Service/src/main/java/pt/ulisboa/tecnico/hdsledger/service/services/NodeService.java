@@ -73,6 +73,8 @@ public class NodeService implements UDPService {
       new ConcurrentHashMap<>();
   // Keep track of already started consensus instances
   private final Set<Integer> setupConsensus = ConcurrentHashMap.newKeySet();
+  // Synchronize threads when waiting for a new consensus instance
+  private final Object waitingConsensusLock = new Object();
 
   // Ledger (for now, just a list of strings)
   private ArrayList<String> ledger = new ArrayList<String>();
@@ -165,6 +167,21 @@ public class NodeService implements UDPService {
   }
 
   public void startConsensus(String value) {
+    // Only start a consensus instance if the last one was decided
+    // We need to be sure that the previous value has been decided
+    synchronized (waitingConsensusLock) {
+      while (lastDecidedConsensusInstance.get() < currentConsensusInstance.get()) {
+        LOGGER.log(Level.INFO,
+            MessageFormat.format("[{0}]: Waiting for consensus instance {1} to be decided",
+                config.getId(), currentConsensusInstance.get()));
+        try {
+          waitingConsensusLock.wait();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+
     // Set initial consensus values
     int localConsensusInstance = this.currentConsensusInstance.incrementAndGet();
     InstanceInfo existingConsensus =
@@ -175,17 +192,6 @@ public class NodeService implements UDPService {
       LOGGER.log(Level.INFO,
           MessageFormat.format("Consensus instance {0} already started", localConsensusInstance));
       return;
-    }
-
-    // Only start a consensus instance if the last one was decided
-    // We need to be sure that the previous value has been decided
-    while (lastDecidedConsensusInstance.get() < localConsensusInstance - 1) {
-      LOGGER.log(Level.INFO, "Waiting for last consensus instance to be decided");
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
     }
 
     // Leader broadcasts PRE-PREPARE message
@@ -452,6 +458,11 @@ public class NodeService implements UDPService {
     LOGGER.log(Level.INFO,
         MessageFormat.format("{0} - Decided on Consensus Instance {1}, Round {2}, Successful? {3}",
             config.getId(), consensusInstance, round, true));
+
+    // Notify waiting threads
+    synchronized (waitingConsensusLock) {
+      waitingConsensusLock.notifyAll();
+    }
   }
 
   public void startRoundChange() {
