@@ -191,8 +191,8 @@ public class NodeService implements UDPService {
     // We need to be sure that the previous value has been decided
     synchronized (waitingConsensusLock) {
       while (lastDecidedConsensusInstance.get() < currentConsensusInstance.get()) {
-        logger.info(MessageFormat.format("[{0}]: Waiting for consensus instance {1} to be decided",
-            config.getId(), currentConsensusInstance.get()));
+        logger.info(MessageFormat.format("[{0}]: Waiting for λ={1} to be decided", config.getId(),
+            currentConsensusInstance.get()));
         try {
           waitingConsensusLock.wait();
         } catch (InterruptedException e) {
@@ -281,7 +281,7 @@ public class NodeService implements UDPService {
     String value = prePrepareMessage.getValue();
 
     logger.info(MessageFormat.format(
-        "[{0}]: Received PRE-PREPARE message from {1} consensus instance {2} round {3} with value {4}",
+        "[{0}]: Received PRE-PREPARE message from {1} for (λ, r) = ({2}, {3}) with value {4}",
         config.getId(), senderId, consensusInstance, round, value));
 
     try {
@@ -317,8 +317,8 @@ public class NodeService implements UDPService {
     receivedPrePrepare.putIfAbsent(consensusInstance, new ConcurrentHashMap<>());
     if (receivedPrePrepare.get(consensusInstance).put(round, true) != null) {
       logger.info(MessageFormat.format(
-          "[{0}]: Already received PRE-PREPARE for consensus instance {1}, round {2}, ignoring",
-          config.getId(), consensusInstance, round));
+          "[{0}]: Already received PRE-PREPARE for (λ, r) = ({1}, {2}), ignoring", config.getId(),
+          consensusInstance, round));
       return;
     }
 
@@ -339,6 +339,9 @@ public class NodeService implements UDPService {
             .setClientId(clientId).build();
 
     this.link.broadcast(consensusMessage);
+
+    logger.info(MessageFormat.format("[{0}]: Broadcasting PREPARE message for (λ, r) = ({1}, {2})",
+        config.getId(), consensusInstance, round));
   }
 
   /*
@@ -356,9 +359,16 @@ public class NodeService implements UDPService {
     String valueSignature = message.getValueSignature();
     String value = prepareMessage.getValue();
 
-    logger.info(MessageFormat.format(
-        "[{0}]: Received PREPARE from {1}, consensus instance {2}, round {3} with value {4}",
-        config.getId(), senderId, consensusInstance, round, value));
+    if (consensusInstance <= lastDecidedConsensusInstance.get()) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Received PREPARE message for already decided λ ={1}, ignoring", config.getId(),
+          consensusInstance));
+      return;
+    }
+
+    logger.info(
+        MessageFormat.format("[{0}]: Received PREPARE from {1}, (λ, r) = ({2}, {3}) with value {4}",
+            config.getId(), senderId, consensusInstance, round, value));
 
     try {
       if (!message.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
@@ -438,6 +448,10 @@ public class NodeService implements UDPService {
               .setValueSignature(valueSignature).setClientId(clientId).build();
         }
 
+        logger.info(MessageFormat.format(
+            "[{0}]: Broadcasting COMMIT message for (λ, r) = ({1}, {2}) with value {3}",
+            config.getId(), consensusInstance, round, value));
+
         link.broadcast(m);
       });
     }
@@ -454,19 +468,28 @@ public class NodeService implements UDPService {
     int round = message.getRound();
     String value = message.deserializeCommitMessage().getValue();
 
-    logger.info(MessageFormat.format(
-        "[{0}]: Received COMMIT message from {1}: consensus instance {2} round {3}", config.getId(),
-        senderId, consensusInstance, round));
-
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
     if (instance == null) {
       // Should never happen because only receives commit as a response to a prepare
       // message
       MessageFormat.format(
-          "{0} - CRITICAL: Received COMMIT message from {1} consensus instance {2} round {3} BUT NO INSTANCE INFO",
+          "{0} - CRITICAL: Received COMMIT message from {1} (λ, r) = ({2}, {3}) BUT NO INSTANCE INFO",
           config.getId(), message.getSenderId(), consensusInstance, round);
       return;
     }
+
+    // Within an instance of the algorithm, each upon rule is triggered at most once
+    // for any round r
+    if (instance.getCommittedRound().isPresent() && instance.getCommittedRound().get() >= round) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Already received COMMIT message for (λ, r) = ({1}, {2}), ignoring",
+          config.getId(), consensusInstance, round));
+      return;
+    }
+
+    logger.info(MessageFormat.format(
+        "[{0}]: Received COMMIT message from {1} for (λ, r) = ({2}, {3}) with value {3}",
+        config.getId(), senderId, consensusInstance, round, value));
 
     try {
       if (!instance.verifyValueSignature(this.clientPublicKeys.get(instance.getClientId()),
@@ -480,15 +503,6 @@ public class NodeService implements UDPService {
     }
 
     commitMessages.addMessage(message);
-
-    // Within an instance of the algorithm, each upon rule is triggered at most once
-    // for any round r
-    if (instance.getCommittedRound().isPresent() && instance.getCommittedRound().get() >= round) {
-      logger.info(MessageFormat.format(
-          "[{0}]: Already received COMMIT message for consensus instance {1} round {2}, ignoring",
-          config.getId(), consensusInstance, round));
-      return;
-    }
 
     Pair<Boolean, Optional<Set<CommitMessage>>> a =
         commitMessages.hasValidCommitQuorum(config.getId(), consensusInstance, round);
@@ -531,8 +545,8 @@ public class NodeService implements UDPService {
 
     lastDecidedConsensusInstance.getAndIncrement();
 
-    logger.info(MessageFormat.format("[{0}]: Decided on consensus instance {1} round {2}",
-        config.getId(), consensusInstance, round));
+    logger.info(MessageFormat.format("[{0}]: Decided {1} on (λ, r) = ({2}, {3})", config.getId(),
+        value, consensusInstance, round));
 
     // Notify waiting threads
     synchronized (waitingConsensusLock) {
@@ -548,9 +562,8 @@ public class NodeService implements UDPService {
       InstanceInfo instance = instanceInfo.get(consensusInstance);
       instance.setCurrentRound(round);
 
-      logger
-          .info(MessageFormat.format("[{0}]: Setting local round to {1} on consensus instance {2}",
-              config.getId(), round, consensusInstance));
+      logger.info(MessageFormat.format("[{0}]: Setting local round to {1} on λ = {2}",
+          config.getId(), round, consensusInstance));
 
       restartTimer();
 
@@ -568,21 +581,21 @@ public class NodeService implements UDPService {
     }
   }
 
-  public void uponRoundChange(ConsensusMessage message) {
+  public synchronized void uponRoundChange(ConsensusMessage message) {
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
     int senderId = message.getSenderId();
 
     logger.info(MessageFormat.format(
-        "[{0}]: Received ROUND_CHANGE message from {1} consensus instance {2} round {3}",
-        config.getId(), message.getSenderId(), consensusInstance, round));
+        "[{0}]: Received ROUND_CHANGE message from {1} for (λ, r) = ({2}, {3})", config.getId(),
+        message.getSenderId(), consensusInstance, round));
 
     roundChangeMessages.addMessage(message);
 
     if (consensusInstance <= lastDecidedConsensusInstance.get()) {
       logger.info(MessageFormat.format(
-          "[{0}]: Received ROUND_CHANGE message for old consensus instance {1}, sending commit",
-          config.getId(), consensusInstance));
+          "[{0}]: Received ROUND_CHANGE message for old λ = {1}, sending commit", config.getId(),
+          consensusInstance));
 
       CommitQuorumMessage commitQuorumMessage =
           new CommitQuorumMessage(instanceInfo.get(consensusInstance).getCommitQuorum().get());
@@ -621,7 +634,7 @@ public class NodeService implements UDPService {
       receivedRoundChangeQuorum.putIfAbsent(consensusInstance, new ConcurrentHashMap<>());
       if (receivedRoundChangeQuorum.get(consensusInstance).put(round, true) != null) {
         logger.info(MessageFormat.format(
-            "[{0}]: Already triggered round change quorum rule for consensus instance {1} round {2}, ignoring",
+            "[{0}]: Already triggered round change quorum rule for (λ, r) = ({1}, {2}), ignoring",
             config.getId(), consensusInstance, round));
         return;
       }
@@ -644,7 +657,7 @@ public class NodeService implements UDPService {
       receivedRoundChangeSet.putIfAbsent(consensusInstance, new ConcurrentHashMap<>());
       if (receivedRoundChangeSet.get(consensusInstance).put(round, true) != null) {
         logger.info(MessageFormat.format(
-            "[{0}]: Already triggered round change set rule for consensus instance {1} round {2}, ignoring",
+            "[{0}]: Already triggered round change set rule for (λ, r) = ({1}, {2}), ignoring",
             config.getId(), consensusInstance, round));
         return;
       }
@@ -695,7 +708,7 @@ public class NodeService implements UDPService {
 
     if (consensusInstance <= lastDecidedConsensusInstance.get()) {
       logger.info(MessageFormat.format(
-          "[{0}]: Received COMMIT_QUORUM message for already decided consensus instance {1}, ignoring",
+          "[{0}]: Received COMMIT_QUORUM message for already decided λ = {1}, ignoring",
           config.getId(), consensusInstance));
       return;
     }
@@ -745,16 +758,11 @@ public class NodeService implements UDPService {
 
                 case COMMIT_QUORUM -> uponCommitQuorum((ConsensusMessage) message);
 
-                case ACK -> logger.info(MessageFormat.format("[{0}]: Received ACK message from {1}",
-                    config.getId(), message.getSenderId()));
+                case ACK -> {}
 
-                case IGNORE ->
-                  logger.info(MessageFormat.format("[{0}]: Received IGNORE message from {1}",
-                      config.getId(), message.getSenderId()));
+                case IGNORE -> {}
 
-                default ->
-                  logger.info(MessageFormat.format("[{0}]: Received unknown message from {1}",
-                      config.getId(), message.getSenderId()));
+                default -> {}
 
               }
 

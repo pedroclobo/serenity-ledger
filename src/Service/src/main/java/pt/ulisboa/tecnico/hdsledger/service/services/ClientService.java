@@ -38,8 +38,8 @@ public class ClientService implements UDPService {
   }
 
   public void append(AppendMessage message) {
-    logger.info(MessageFormat.format("{0} - Received Append Message from {1}", this.config.getId(),
-        message.getSenderId()));
+    logger.info(MessageFormat.format("[{0}]: Received Append from {1} with value {2}",
+        this.config.getId(), message.getSenderId(), message.getValue()));
     nodeService.startConsensus(message.getValue(), message.getSenderId(),
         message.getValueSignature());
   }
@@ -56,7 +56,7 @@ public class ClientService implements UDPService {
             try {
               message = link.receive();
             } catch (InvalidSignatureException e) {
-              logger.info(MessageFormat.format("{0} - EXCEPTION: {1}", this.config.getId(),
+              logger.info(MessageFormat.format("[{0}]: EXCEPTION: {1}", this.config.getId(),
                   e.getMessage()));
               continue;
             }
@@ -66,16 +66,11 @@ public class ClientService implements UDPService {
               switch (message.getType()) {
                 case APPEND -> append((AppendMessage) message);
 
-                case ACK -> logger.info(MessageFormat.format("{0} - Received ACK message from {1}",
-                    config.getId(), message.getSenderId()));
+                case ACK -> {}
 
-                case IGNORE ->
-                  logger.info(MessageFormat.format("{0} - Received IGNORE message from {1}",
-                      config.getId(), message.getSenderId()));
+                case IGNORE -> {}
 
-                default ->
-                  logger.info(MessageFormat.format("{0} - Received unknown message from {1}",
-                      config.getId(), message.getSenderId()));
+                default -> {}
 
               }
 
