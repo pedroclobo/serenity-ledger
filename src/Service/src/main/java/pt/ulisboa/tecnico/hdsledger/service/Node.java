@@ -18,9 +18,10 @@ import java.util.logging.Level;
 
 public class Node {
 
-  private static final CustomLogger LOGGER = new CustomLogger(Node.class.getName());
   private static String nodesConfigPath = "src/main/resources/";
   private static String clientsConfigPath = "../Client/src/main/resources/";
+
+  private final CustomLogger logger;
 
   private Link linkToNodes;
   private Link linkToClients;
@@ -30,22 +31,21 @@ public class Node {
   public static void main(String[] args) {
 
     // Parse command line arguments
-    if (args.length != 3) {
-      System.err.println("Usage: java Node <nodeId> <nodesConfigPath> <clientsConfigPath>");
+    if (args.length != 4) {
+      System.err
+          .println("Usage: java Node <nodeId> <nodesConfigPath> <clientsConfigPath> [true|false]");
       System.exit(1);
     }
     int id = Integer.parseInt(args[0]);
     nodesConfigPath += args[1];
     clientsConfigPath += args[2];
-
-    LOGGER.log(Level.INFO, MessageFormat.format(
-        "Node configuration: {0}\nClient Configuration: {1}", nodesConfigPath, clientsConfigPath));
+    boolean activateLogs = Boolean.parseBoolean(args[3]);
 
     // Retrieve nodes and client configurations
     ProcessConfig[] nodeConfigs = ProcessConfigBuilder.fromFile(nodesConfigPath);
     ProcessConfig[] clientConfigs = ProcessConfigBuilder.fromFile(clientsConfigPath);
 
-    Node node = new Node(id, nodeConfigs, clientConfigs);
+    Node node = new Node(id, nodeConfigs, clientConfigs, activateLogs);
     node.start();
 
     // Wait for the user to terminate the program
@@ -54,12 +54,15 @@ public class Node {
     node.shutdown();
   }
 
-  public Node(int id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs) {
+  public Node(int id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs,
+      boolean activateLogs) {
+    logger = new CustomLogger(Node.class.getName(), activateLogs);
+
     // Retrieve the current node's config and the leader's config
     ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId() == id).findAny()
         .orElseThrow(() -> new HDSSException(ErrorMessage.NoSuchNode));
 
-    LOGGER.log(Level.INFO, MessageFormat.format(
+    logger.log(MessageFormat.format(
         "Node with id {0} with node socket on <{1}:{2}> and client socket on <{3}:{4}> and leader={5}",
         nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
         nodeConfig.getHostname(), nodeConfig.getClientPort(), nodeConfig.isLeader(1, 1)));
@@ -70,8 +73,10 @@ public class Node {
         new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, AppendMessage.class);
 
     // Services that implement listen from UDPService
-    nodeService = new NodeService(linkToNodes, linkToClients, nodeConfig, nodeConfigs);
-    clientService = new ClientService(linkToClients, nodeConfig, nodeConfigs, nodeService);
+    nodeService =
+        new NodeService(linkToNodes, linkToClients, nodeConfig, nodeConfigs, activateLogs);
+    clientService =
+        new ClientService(linkToClients, nodeConfig, nodeConfigs, nodeService, activateLogs);
   }
 
   public void start() {

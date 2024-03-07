@@ -3,7 +3,7 @@ package pt.ulisboa.tecnico.hdsledger.utilities;
 public class ProcessConfig {
 
   public enum ByzantineBehavior {
-    None, Drop, FakeLeader
+    None, Drop, FakeLeader, FakeValue
   }
 
   private int N;

@@ -8,24 +8,27 @@ import java.util.logging.Logger;
 
 public class CustomLogger {
 
-  private static Logger LOGGER;
+  private final Logger logger;
+  private boolean activateLogs;
 
-  public CustomLogger(String name) {
-    LOGGER = Logger.getLogger(name);
-    LOGGER.setLevel(Level.ALL);
-    LOGGER.setUseParentHandlers(false);
+  public CustomLogger(String name, boolean activateLogs) {
+    this.activateLogs = activateLogs;
+    this.logger = Logger.getLogger(name);
+    logger.setUseParentHandlers(false);
     ConsoleHandler handler = new ConsoleHandler();
-
-    Formatter formatter = new CustomLog();
-    handler.setFormatter(formatter);
-
-    LOGGER.addHandler(handler);
+    handler.setFormatter(new CustomLog());
+    logger.addHandler(handler);
   }
 
-  public void log(Level level, String message) {
-    LOGGER.log(level, message);
+  public void log(String message) {
+    if (!activateLogs)
+      return;
+    logger.log(Level.INFO, message);
   }
 
+  public void deactivateLogs() {
+    activateLogs = false;
+  }
 }
 
 

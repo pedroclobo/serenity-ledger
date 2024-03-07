@@ -17,13 +17,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.stream.Collector;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class Link {
 
-  private static final CustomLogger LOGGER = new CustomLogger(Link.class.getName());
+  private final CustomLogger logger;
   // Time to wait for an ACK before resending the message
   private final int BASE_SLEEP_TIME;
   // UDP Socket
@@ -54,6 +53,7 @@ public class Link {
     this.config = self;
     this.messageClass = messageClass;
     this.BASE_SLEEP_TIME = baseSleepTime;
+    this.logger = new CustomLogger(Link.class.getName(), activateLogs);
 
     Arrays.stream(nodes).forEach(node -> {
       int id = node.getId();
@@ -65,9 +65,6 @@ public class Link {
       this.socket = new DatagramSocket(port, InetAddress.getByName(config.getHostname()));
     } catch (UnknownHostException | SocketException e) {
       throw new HDSSException(ErrorMessage.CannotOpenSocket);
-    }
-    if (!activateLogs) {
-      LogManager.getLogManager().reset();
     }
   }
 
@@ -126,18 +123,17 @@ public class Link {
         if (nodeId == this.config.getId()) {
           this.localhostQueue.add(data);
 
-          LOGGER.log(Level.INFO,
-              MessageFormat.format("{0} - Message {1} (locally) sent to {2}:{3} successfully",
+          logger
+              .log(MessageFormat.format("{0} - Message {1} (locally) sent to {2}:{3} successfully",
                   config.getId(), data.getType(), destAddress, destPort));
 
           return;
         }
 
         for (;;) {
-          LOGGER.log(Level.INFO,
-              MessageFormat.format(
-                  "{0} - Sending {1} message to {2}:{3} with message ID {4} - Attempt #{5}",
-                  config.getId(), data.getType(), destAddress, destPort, messageId, count++));
+          logger.log(MessageFormat.format(
+              "{0} - Sending {1} message to {2}:{3} with message ID {4} - Attempt #{5}",
+              config.getId(), data.getType(), destAddress, destPort, messageId, count++));
 
           unreliableSend(destAddress, destPort, data);
 
@@ -151,9 +147,8 @@ public class Link {
           sleepTime <<= 1;
         }
 
-        LOGGER.log(Level.INFO,
-            MessageFormat.format("{0} - Message {1} sent to {2}:{3} successfully", config.getId(),
-                data.getType(), destAddress, destPort));
+        logger.log(MessageFormat.format("{0} - Message {1} sent to {2}:{3} successfully",
+            config.getId(), data.getType(), destAddress, destPort));
       } catch (InterruptedException | UnknownHostException e) {
         e.printStackTrace();
       }
@@ -222,8 +217,8 @@ public class Link {
 
       try {
         if (!signedMessage.verify(nodes.get(message.getSenderId()).getPublicKeyPath())) {
-          LOGGER.log(Level.INFO,
-              MessageFormat.format("{0} - Message from {1} with ID {2} has invalid signature",
+          logger
+              .log(MessageFormat.format("{0} - Message from {1} with ID {2} has invalid signature",
                   config.getId(), message.getSenderId(), message.getMessageId()));
 
           throw new InvalidSignatureException(ErrorMessage.InvalidSignature.getMessage());

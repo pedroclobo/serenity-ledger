@@ -6,10 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-class FakeLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
+@Disabled("Only enable when client signature is implemented")
+class FakeValueByzantineBehaviorTest extends ByzantineBehaviorTest {
 
-  public FakeLeaderByzantineBehaviorTest() {
-    super("fake_leader_config.json", "client_config.json");
+  public FakeValueByzantineBehaviorTest() {
+    super("fake_value_config.json", "client_config.json");
   }
 
   @Test
@@ -45,7 +46,6 @@ class FakeLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
   }
 
   @Test
-  @Disabled
   public void multipleConcurrentAppends() throws InterruptedException {
     Thread thread1 = new Thread(() -> library.append("value1"));
     Thread thread2 = new Thread(() -> library.append("value2"));

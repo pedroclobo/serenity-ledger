@@ -33,7 +33,7 @@ abstract class ByzantineBehaviorTest {
     ProcessConfig[] nodesConfig = parseConfigs(nodesConfigPath);
     ProcessConfig[] clientsConfig = parseConfigs(clientsConfigPath);
     for (ProcessConfig nodeConfig : nodesConfig) {
-      Node node = new Node(nodeConfig.getId(), nodesConfig, clientsConfig);
+      Node node = new Node(nodeConfig.getId(), nodesConfig, clientsConfig, true);
       nodes.add(node);
       node.start();
     }
@@ -45,7 +45,7 @@ abstract class ByzantineBehaviorTest {
     for (ProcessConfig nodeConfig : newNodesConfig) {
       nodeConfig.setPort(nodeConfig.getClientPort());
     }
-    library = new Library(newNodesConfig, newClientsConfig[0], true);
+    library = new Library(newNodesConfig, newClientsConfig[0], false);
   }
 
   @AfterEach

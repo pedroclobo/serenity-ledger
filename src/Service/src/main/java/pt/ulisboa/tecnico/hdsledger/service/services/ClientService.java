@@ -13,7 +13,7 @@ import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureExcepti
 
 public class ClientService implements UDPService {
 
-  private static final CustomLogger LOGGER = new CustomLogger(ClientService.class.getName());
+  private final CustomLogger logger;
   // Client configurations
   private final ProcessConfig[] clientConfigs;
   // Node configuration
@@ -24,8 +24,9 @@ public class ClientService implements UDPService {
   private final NodeService nodeService;
 
   public ClientService(Link link, ProcessConfig config, ProcessConfig[] clientConfigs,
-      NodeService nodeService) {
+      NodeService nodeService, boolean activateLogs) {
 
+    this.logger = new CustomLogger(ClientService.class.getName(), activateLogs);
     this.link = link;
     this.config = config;
     this.clientConfigs = clientConfigs;
@@ -37,8 +38,8 @@ public class ClientService implements UDPService {
   }
 
   public void append(AppendMessage message) {
-    LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received Append Message from {1}",
-        this.config.getId(), message.getSenderId()));
+    logger.log(MessageFormat.format("[{0}]: Received Append from {1} with value {2}",
+        config.getId(), message.getSenderId(), message.getValue()));
     nodeService.startConsensus(message.getValue());
   }
 
@@ -54,8 +55,8 @@ public class ClientService implements UDPService {
             try {
               message = link.receive();
             } catch (InvalidSignatureException e) {
-              LOGGER.log(Level.INFO, MessageFormat.format("{0} - EXCEPTION: {1}",
-                  this.config.getId(), e.getMessage()));
+              logger.log(MessageFormat.format("{0} - EXCEPTION: {1}", this.config.getId(),
+                  e.getMessage()));
               continue;
             }
 
@@ -64,17 +65,15 @@ public class ClientService implements UDPService {
               switch (message.getType()) {
                 case APPEND -> append((AppendMessage) message);
 
-                case ACK ->
-                  LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received ACK message from {1}",
+                case ACK -> logger.log(MessageFormat.format("[{0}]: Received ACK from {1}",
+                    config.getId(), message.getSenderId()));
+
+                case IGNORE -> {
+                }
+
+                default ->
+                  logger.log(MessageFormat.format("[{0}]: Received unknown message from {1}",
                       config.getId(), message.getSenderId()));
-
-                case IGNORE -> LOGGER.log(Level.INFO,
-                    MessageFormat.format("{0} - Received IGNORE message from {1}", config.getId(),
-                        message.getSenderId()));
-
-                default -> LOGGER.log(Level.INFO,
-                    MessageFormat.format("{0} - Received unknown message from {1}", config.getId(),
-                        message.getSenderId()));
 
               }
 
