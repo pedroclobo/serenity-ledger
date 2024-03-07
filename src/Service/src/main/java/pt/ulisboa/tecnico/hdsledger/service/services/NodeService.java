@@ -438,7 +438,7 @@ public class NodeService implements UDPService {
               .setValueSignature(valueSignature).setClientId(clientId).build();
         }
 
-        link.send(senderMessage.getSenderId(), m);
+        link.broadcast(m);
       });
     }
   }
