@@ -303,13 +303,6 @@ public class NodeService implements UDPService {
       setupConsensus(value, consensusInstance, clientId, valueSignature);
     }
 
-    // this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value));
-
-    // int consensusInstance = this.currentConsensusInstance.get();
-    // int round = instanceInfo.get(consensusInstance).getCurrentRound();
-
-    // return nodesConfig[id - 1].isLeader(consensusInstance, round);
-
     // Justify pre-prepare
     if (!(isLeader(senderId) && justifyPrePrepare())) {
       logger.info(MessageFormat.format("[{0}]: Unjustified PRE-PREPARE", config.getId()));
