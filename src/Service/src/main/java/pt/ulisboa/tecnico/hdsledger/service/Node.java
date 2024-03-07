@@ -5,7 +5,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.service.services.ClientService;
 import pt.ulisboa.tecnico.hdsledger.service.services.NodeService;
-import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
+import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
@@ -14,11 +14,10 @@ import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
 
 import java.text.MessageFormat;
 import java.util.Arrays;
-import java.util.logging.Level;
 
 public class Node {
 
-  private static final CustomLogger LOGGER = new CustomLogger(Node.class.getName());
+  private final HDSLogger logger;
   private static String nodesConfigPath = "src/main/resources/";
   private static String clientsConfigPath = "../Client/src/main/resources/";
 
@@ -38,14 +37,11 @@ public class Node {
     nodesConfigPath += args[1];
     clientsConfigPath += args[2];
 
-    LOGGER.log(Level.INFO, MessageFormat.format(
-        "Node configuration: {0}\nClient Configuration: {1}", nodesConfigPath, clientsConfigPath));
-
     // Retrieve nodes and client configurations
     ProcessConfig[] nodeConfigs = ProcessConfigBuilder.fromFile(nodesConfigPath);
     ProcessConfig[] clientConfigs = ProcessConfigBuilder.fromFile(clientsConfigPath);
 
-    Node node = new Node(id, nodeConfigs, clientConfigs);
+    Node node = new Node(id, nodeConfigs, clientConfigs, true);
     node.start();
 
     // Wait for the user to terminate the program
@@ -54,12 +50,14 @@ public class Node {
     node.shutdown();
   }
 
-  public Node(int id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs) {
+  public Node(int id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs, boolean debug) {
+    this.logger = new HDSLogger(Node.class.getName(), debug);
+
     // Retrieve the current node's config and the leader's config
     ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId() == id).findAny()
         .orElseThrow(() -> new HDSSException(ErrorMessage.NoSuchNode));
 
-    LOGGER.log(Level.INFO, MessageFormat.format(
+    logger.info(MessageFormat.format(
         "Node with id {0} with node socket on <{1}:{2}> and client socket on <{3}:{4}> and leader={5}",
         nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
         nodeConfig.getHostname(), nodeConfig.getClientPort(), nodeConfig.isLeader(1, 1)));
@@ -70,8 +68,8 @@ public class Node {
         new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, AppendMessage.class);
 
     // Services that implement listen from UDPService
-    nodeService = new NodeService(linkToNodes, linkToClients, nodeConfig, nodeConfigs);
-    clientService = new ClientService(linkToClients, nodeConfig, nodeConfigs, nodeService);
+    nodeService = new NodeService(linkToNodes, linkToClients, nodeConfig, nodeConfigs, debug);
+    clientService = new ClientService(linkToClients, nodeConfig, nodeConfigs, nodeService, debug);
   }
 
   public void start() {
