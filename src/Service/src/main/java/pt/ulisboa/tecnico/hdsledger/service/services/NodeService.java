@@ -727,11 +727,14 @@ public class NodeService implements UDPService {
 
                 case COMMIT_QUORUM -> uponCommitQuorum((ConsensusMessage) message);
 
-                case ACK -> {}
+                case ACK -> {
+                }
 
-                case IGNORE -> {}
+                case IGNORE -> {
+                }
 
-                default -> {}
+                default -> {
+                }
 
               }
 

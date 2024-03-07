@@ -66,11 +66,14 @@ public class ClientService implements UDPService {
               switch (message.getType()) {
                 case APPEND -> append((AppendMessage) message);
 
-                case ACK -> {}
+                case ACK -> {
+                }
 
-                case IGNORE -> {}
+                case IGNORE -> {
+                }
 
-                default -> {}
+                default -> {
+                }
 
               }
 
