@@ -201,6 +201,10 @@ public class NodeService implements UDPService {
       }
     }
 
+    startConsensus2(value, clientId, valueSignature);
+  }
+
+  private synchronized void startConsensus2(String value, int clientId, String valueSignature) {
     // Set initial consensus values
     int localConsensusInstance = this.currentConsensusInstance.incrementAndGet();
     InstanceInfo existingConsensus = this.instanceInfo.put(localConsensusInstance,
@@ -231,7 +235,7 @@ public class NodeService implements UDPService {
     restartTimer();
   }
 
-  private boolean justifyPrePrepare() {
+  private synchronized boolean justifyPrePrepare() {
     int consensusInstance = getCurrentConsensusInstance();
     int round = getCurrentRound();
 
@@ -267,7 +271,7 @@ public class NodeService implements UDPService {
    *
    * @param message Message to be handled
    */
-  public void uponPrePrepare(ConsensusMessage message) {
+  public synchronized void uponPrePrepare(ConsensusMessage message) {
 
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
@@ -388,42 +392,18 @@ public class NodeService implements UDPService {
         new InstanceInfo(value, clientId, valueSignature));
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
-    // Within an instance of the algorithm,
-    // each upon rule is triggered at most once for any round r.
-    // Late prepare (consensus already ended for other nodes) only reply to him (as
-    // an ACK)
-    // TODO: is this necessary? we already have a commit quorum message
-    if (instance.getPreparedRound().isPresent() && instance.getPreparedRound().get() >= round) {
-      logger.info(MessageFormat.format(
-          "[{0}]: Already received PREPARE for consensus instance {1} round {2}, replying again to make sure it reaches the initial sender",
-          config.getId(), consensusInstance, round));
-
-      ConsensusMessage m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
-          .setConsensusInstance(consensusInstance).setRound(round).setReplyTo(senderId)
-          .setReplyToMessageId(message.getMessageId())
-          .setMessage(instance.getCommitMessage().get().toJson()).setValueSignature(valueSignature)
-          .setClientId(clientId).build();
-
-      if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
-        m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
-            .setConsensusInstance(consensusInstance).setRound(round).setReplyTo(senderId)
-            .setReplyToMessageId(message.getMessageId())
-            .setMessage(new CommitMessage("wrong value").toJson()).setValueSignature(valueSignature)
-            .setClientId(clientId).build();
-      }
-
-      link.send(senderId, m);
-
-      return;
-    }
-
     // Find value with valid quorum
     Optional<String> preparedValue =
         prepareMessages.hasValidPrepareQuorum(config.getId(), consensusInstance, round);
 
-    if (preparedValue.isPresent()) {
+    if (preparedValue.isPresent() && !instance.triggeredPreparedRule(round)) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Received valid PREPARE quorum for (λ, r) = ({1}, {2}) with value {3}",
+          config.getId(), consensusInstance, round, preparedValue.get()));
+
       instance.setPreparedValue(preparedValue.get());
       instance.setPreparedRound(round);
+      instance.setTriggeredPreparedRule(round);
 
       // Get the prepare messages to reply with a commit message
       Collection<ConsensusMessage> sendersMessage =
@@ -528,7 +508,7 @@ public class NodeService implements UDPService {
     }
   }
 
-  private void decide(int consensusInstance, int round, String value) {
+  private synchronized void decide(int consensusInstance, int round, String value) {
     synchronized (ledger) {
 
       // Increment size of ledger to accommodate current instance
@@ -554,7 +534,7 @@ public class NodeService implements UDPService {
     }
   }
 
-  public void startRoundChange() {
+  public synchronized void startRoundChange() {
     int consensusInstance = this.currentConsensusInstance.get();
     int round = instanceInfo.get(consensusInstance).getCurrentRound() + 1;
 
