@@ -7,13 +7,13 @@ import java.util.logging.Level;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
-import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
+import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
 
 public class ClientService implements UDPService {
 
-  private static final CustomLogger LOGGER = new CustomLogger(ClientService.class.getName());
+  private final HDSLogger logger;
   // Client configurations
   private final ProcessConfig[] clientConfigs;
   // Node configuration
@@ -24,8 +24,9 @@ public class ClientService implements UDPService {
   private final NodeService nodeService;
 
   public ClientService(Link link, ProcessConfig config, ProcessConfig[] clientConfigs,
-      NodeService nodeService) {
+      NodeService nodeService, boolean debug) {
 
+    this.logger = new HDSLogger(ClientService.class.getName(), debug);
     this.link = link;
     this.config = config;
     this.clientConfigs = clientConfigs;
@@ -37,8 +38,8 @@ public class ClientService implements UDPService {
   }
 
   public void append(AppendMessage message) {
-    LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received Append Message from {1}",
-        this.config.getId(), message.getSenderId()));
+    logger.info(MessageFormat.format("{0} - Received Append Message from {1}", this.config.getId(),
+        message.getSenderId()));
     nodeService.startConsensus(message.getValue());
   }
 
@@ -54,8 +55,8 @@ public class ClientService implements UDPService {
             try {
               message = link.receive();
             } catch (InvalidSignatureException e) {
-              LOGGER.log(Level.INFO, MessageFormat.format("{0} - EXCEPTION: {1}",
-                  this.config.getId(), e.getMessage()));
+              logger.info(MessageFormat.format("{0} - EXCEPTION: {1}", this.config.getId(),
+                  e.getMessage()));
               continue;
             }
 
@@ -64,17 +65,16 @@ public class ClientService implements UDPService {
               switch (message.getType()) {
                 case APPEND -> append((AppendMessage) message);
 
-                case ACK ->
-                  LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received ACK message from {1}",
+                case ACK -> logger.info(MessageFormat.format("{0} - Received ACK message from {1}",
+                    config.getId(), message.getSenderId()));
+
+                case IGNORE ->
+                  logger.info(MessageFormat.format("{0} - Received IGNORE message from {1}",
                       config.getId(), message.getSenderId()));
 
-                case IGNORE -> LOGGER.log(Level.INFO,
-                    MessageFormat.format("{0} - Received IGNORE message from {1}", config.getId(),
-                        message.getSenderId()));
-
-                default -> LOGGER.log(Level.INFO,
-                    MessageFormat.format("{0} - Received unknown message from {1}", config.getId(),
-                        message.getSenderId()));
+                default ->
+                  logger.info(MessageFormat.format("{0} - Received unknown message from {1}",
+                      config.getId(), message.getSenderId()));
 
               }
 

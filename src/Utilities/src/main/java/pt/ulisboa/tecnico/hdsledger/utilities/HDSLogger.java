@@ -6,30 +6,28 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-public class CustomLogger {
+public class HDSLogger {
+  private Logger logger;
+  private boolean debug;
 
-  private static Logger LOGGER;
-
-  public CustomLogger(String name) {
-    LOGGER = Logger.getLogger(name);
-    LOGGER.setLevel(Level.ALL);
-    LOGGER.setUseParentHandlers(false);
+  public HDSLogger(String name, boolean debug) {
+    this.debug = debug;
+    this.logger = Logger.getLogger(name);
+    logger.setUseParentHandlers(false);
     ConsoleHandler handler = new ConsoleHandler();
-
-    Formatter formatter = new CustomLog();
-    handler.setFormatter(formatter);
-
-    LOGGER.addHandler(handler);
+    handler.setFormatter(new HDSLogFormatter());
+    logger.addHandler(handler);
   }
 
-  public void log(Level level, String message) {
-    LOGGER.log(level, message);
+  public void info(String message) {
+    if (!debug)
+      return;
+    logger.log(Level.INFO, message);
   }
-
 }
 
 
-class CustomLog extends Formatter {
+class HDSLogFormatter extends Formatter {
   @Override
   public String format(LogRecord record) {
     StringBuilder sb = new StringBuilder();

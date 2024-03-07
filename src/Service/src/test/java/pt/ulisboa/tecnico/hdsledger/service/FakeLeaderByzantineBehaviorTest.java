@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.hdsledger.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class FakeLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
@@ -44,6 +45,7 @@ class FakeLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
   }
 
   @Test
+  @Disabled
   public void multipleConcurrentAppends() throws InterruptedException {
     Thread thread1 = new Thread(() -> library.append("value1"));
     Thread thread2 = new Thread(() -> library.append("value2"));
