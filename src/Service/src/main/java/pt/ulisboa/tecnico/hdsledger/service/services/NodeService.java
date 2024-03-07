@@ -407,16 +407,12 @@ public class NodeService implements UDPService {
       instance.setCommitMessage(c);
       sendersMessage.forEach(senderMessage -> {
         ConsensusMessage m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
-            .setConsensusInstance(consensusInstance).setRound(round)
-            .setReplyTo(senderMessage.getSenderId())
-            .setReplyToMessageId(senderMessage.getMessageId()).setMessage(c.toJson())
+            .setConsensusInstance(consensusInstance).setRound(round).setMessage(c.toJson())
             .setValueSignature(valueSignature).setClientId(clientId).build();
 
         if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
           m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
               .setConsensusInstance(consensusInstance).setRound(round)
-              .setReplyTo(senderMessage.getSenderId())
-              .setReplyToMessageId(senderMessage.getMessageId())
               .setMessage(new CommitMessage("wrong value").toJson())
               .setValueSignature(valueSignature).setClientId(clientId).build();
         }
