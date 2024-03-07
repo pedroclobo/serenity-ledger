@@ -2,8 +2,10 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
@@ -20,6 +22,8 @@ public class InstanceInfo {
   private String valueSignature;
   private int clientId;
 
+  private Map<Integer, Boolean> triggeredPreparedRule;
+
   public InstanceInfo(String inputValue, int clientId, String valueSignature) {
     this.currentRound = 1;
     this.preparedRound = Optional.empty();
@@ -30,6 +34,8 @@ public class InstanceInfo {
     this.commitQuorum = Optional.empty();
     this.valueSignature = valueSignature;
     this.clientId = clientId;
+
+    this.triggeredPreparedRule = new ConcurrentHashMap<>();
   }
 
   public int getCurrentRound() {
@@ -94,6 +100,14 @@ public class InstanceInfo {
 
   public int getClientId() {
     return clientId;
+  }
+
+  public boolean triggeredPreparedRule(int round) {
+    return triggeredPreparedRule.getOrDefault(round, false);
+  }
+
+  public void setTriggeredPreparedRule(int round) {
+    this.triggeredPreparedRule.put(round, true);
   }
 
   public boolean verifyValueSignature(String publicKeyPath, String value)
