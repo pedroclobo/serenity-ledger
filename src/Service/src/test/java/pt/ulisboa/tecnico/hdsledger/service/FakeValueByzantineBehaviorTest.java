@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class FakeValueByzantineBehaviorTest extends ByzantineBehaviorTest {
@@ -63,7 +62,6 @@ public class FakeValueByzantineBehaviorTest extends ByzantineBehaviorTest {
   }
 
   @Test
-  @Disabled
   public void multipleConcurrentAppends() throws InterruptedException {
     Thread thread1 = new Thread(() -> library.append("value1"));
     Thread thread2 = new Thread(() -> library.append("value2"));
