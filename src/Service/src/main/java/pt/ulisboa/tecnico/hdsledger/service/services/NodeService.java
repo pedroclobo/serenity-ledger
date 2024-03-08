@@ -293,8 +293,8 @@ public class NodeService implements UDPService {
 
     try {
       if (!message.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
-        logger.info(
-            MessageFormat.format("[{0}]: Invalid signature for value {1}", config.getId(), value));
+        logger.info(MessageFormat.format("[{0}]: Invalid signature for value `{1}`", config.getId(),
+            value));
         return;
       }
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
@@ -359,8 +359,8 @@ public class NodeService implements UDPService {
 
     try {
       if (!message.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
-        logger.info(
-            MessageFormat.format("[{0}]: Invalid signature for value {1}", config.getId(), value));
+        logger.info(MessageFormat.format("[{0}]: Invalid signature for value `{1}`", config.getId(),
+            value));
         return;
       }
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
@@ -439,14 +439,14 @@ public class NodeService implements UDPService {
     }
 
     logger.info(MessageFormat.format(
-        "[{0}]: Received COMMIT message from {1} for (λ, r) = ({2}, {3}) with value {3}",
+        "[{0}]: Received COMMIT message from {1} for (λ, r) = ({2}, {3}) with value {4}",
         config.getId(), senderId, consensusInstance, round, value));
 
     try {
       if (!instance.verifyValueSignature(this.clientPublicKeys.get(instance.getClientId()),
           value)) {
-        logger.info(
-            MessageFormat.format("[{0}]: Invalid signature for value {1}", config.getId(), value));
+        logger.info(MessageFormat.format("[{0}]: Invalid signature for value `{1}`", config.getId(),
+            value));
         return;
       }
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
@@ -663,8 +663,8 @@ public class NodeService implements UDPService {
     try {
       if (!instance.verifyValueSignature(this.clientPublicKeys.get(instance.getClientId()),
           value)) {
-        logger.info(
-            MessageFormat.format("[{0}]: Invalid signature for value {1}", config.getId(), value));
+        logger.info(MessageFormat.format("[{0}]: Invalid signature for value `{1}`", config.getId(),
+            value));
         return;
       }
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
