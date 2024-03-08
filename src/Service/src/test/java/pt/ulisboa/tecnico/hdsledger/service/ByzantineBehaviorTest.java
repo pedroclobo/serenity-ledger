@@ -17,9 +17,16 @@ abstract class ByzantineBehaviorTest {
   protected ArrayList<Node> nodes;
   protected Library library;
 
+  protected int f;
+  protected int quorumSize;
+
   public ByzantineBehaviorTest(String nodeConfigFile, String clientConfigFile) {
     nodesConfigPath += nodeConfigFile;
     clientsConfigPath += clientConfigFile;
+
+    ProcessConfig[] nodesConfig = parseConfigs(nodesConfigPath);
+    f = (nodesConfig.length - 1) / 3;
+    quorumSize = 2 * f + 1;
   }
 
   public ProcessConfig[] parseConfigs(String configPath) {

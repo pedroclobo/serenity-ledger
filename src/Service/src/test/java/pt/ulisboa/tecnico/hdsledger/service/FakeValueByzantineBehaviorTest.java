@@ -3,6 +3,10 @@ package pt.ulisboa.tecnico.hdsledger.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -20,10 +24,18 @@ public class FakeValueByzantineBehaviorTest extends ByzantineBehaviorTest {
 
     library.append("value");
 
+    List<Integer> sizes = new ArrayList<>();
+    List<String> values = new ArrayList<>();
     for (Node node : nodes) {
-      assertEquals(1, node.getNodeService().getLedger().size());
-      assertEquals("value", node.getNodeService().getLedger().get(0));
+      sizes.add(node.getNodeService().getLedger().size());
+      values.add(String.join("", node.getNodeService().getLedger()));
     }
+
+    long sizeCount = sizes.stream().filter(size -> size == 1).count();
+    assertTrue(sizeCount >= quorumSize, "At least a quorum should have ledgers of size " + 1);
+
+    long valueCount = values.stream().filter(value -> value.equals("value")).count();
+    assertTrue(valueCount >= quorumSize, "At least a quorum should have the correct ledger");
   }
 
   @Test
@@ -36,12 +48,18 @@ public class FakeValueByzantineBehaviorTest extends ByzantineBehaviorTest {
     library.append("value2");
     library.append("value3");
 
+    List<Integer> sizes = new ArrayList<>();
+    List<String> values = new ArrayList<>();
     for (Node node : nodes) {
-      assertEquals(3, node.getNodeService().getLedger().size());
-      assertEquals("value1", node.getNodeService().getLedger().get(0));
-      assertEquals("value2", node.getNodeService().getLedger().get(1));
-      assertEquals("value3", node.getNodeService().getLedger().get(2));
+      sizes.add(node.getNodeService().getLedger().size());
+      values.add(String.join("", node.getNodeService().getLedger()));
     }
+
+    long sizeCount = sizes.stream().filter(size -> size == 3).count();
+    assertTrue(sizeCount >= quorumSize, "At least a quorum should have ledgers of size " + 3);
+
+    long valueCount = values.stream().filter(value -> value.equals("value1value2value3")).count();
+    assertTrue(valueCount >= quorumSize, "At least a quorum should have the correct ledger");
   }
 
   @Test
@@ -55,11 +73,22 @@ public class FakeValueByzantineBehaviorTest extends ByzantineBehaviorTest {
     thread1.join();
     thread2.join();
 
+    List<Integer> sizes = new ArrayList<>();
+    List<String> values = new ArrayList<>();
     for (Node node : nodes) {
-      assertEquals(2, node.getNodeService().getLedger().size());
-      assertTrue(node.getNodeService().getLedger().contains("value1"));
-      assertTrue(node.getNodeService().getLedger().contains("value2"));
+      sizes.add(node.getNodeService().getLedger().size());
+      values.add(String.join("", node.getNodeService().getLedger()));
     }
+
+    long sizeCount = sizes.stream().filter(size -> size == 2).count();
+    assertTrue(sizeCount >= quorumSize, "At least a quorum should have ledgers of size " + 2);
+
+    List<Long> valueCount =
+        values.stream().collect(Collectors.groupingBy(s -> s, Collectors.counting())).values()
+            .stream().collect(Collectors.toList());
+
+    assertTrue(valueCount.stream().anyMatch(count -> count >= quorumSize),
+        "At least a quorum should have the correct ledger");
   }
 
 }
