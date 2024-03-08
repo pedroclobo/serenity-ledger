@@ -15,12 +15,14 @@ public class InstanceInfo {
   private int currentRound;
   private Optional<Integer> preparedRound;
   private Optional<String> preparedValue;
+  private Optional<Integer> preparedClientId;
+  private Optional<String> preparedValueSignature;
   private String inputValue;
+  private int clientId;
+  private String valueSignature;
   private Optional<CommitMessage> commitMessage;
   private Optional<Integer> committedRound;
   private Optional<Set<CommitMessage>> commitQuorum;
-  private String valueSignature;
-  private int clientId;
 
   private Map<Integer, Boolean> triggeredPrePrepareRule;
   private Map<Integer, Boolean> triggeredPrepareRule;
@@ -31,12 +33,14 @@ public class InstanceInfo {
     this.currentRound = 1;
     this.preparedRound = Optional.empty();
     this.preparedValue = Optional.empty();
+    this.preparedClientId = Optional.empty();
+    this.preparedValueSignature = Optional.empty();
     this.inputValue = inputValue;
+    this.clientId = clientId;
+    this.valueSignature = valueSignature;
     this.commitMessage = Optional.empty();
     this.committedRound = Optional.empty();
     this.commitQuorum = Optional.empty();
-    this.valueSignature = valueSignature;
-    this.clientId = clientId;
 
     this.triggeredPrePrepareRule = new ConcurrentHashMap<>();
     this.triggeredPrepareRule = new ConcurrentHashMap<>();
@@ -66,6 +70,22 @@ public class InstanceInfo {
 
   public void setPreparedValue(String preparedValue) {
     this.preparedValue = Optional.of(preparedValue);
+  }
+
+  public Optional<Integer> getPreparedClientId() {
+    return preparedClientId;
+  }
+
+  public void setPreparedClientId(int preparedClientId) {
+    this.preparedClientId = Optional.of(preparedClientId);
+  }
+
+  public Optional<String> getPreparedValueSignature() {
+    return preparedValueSignature;
+  }
+
+  public void setPreparedValueSignature(String preparedValueSignature) {
+    this.preparedValueSignature = Optional.of(preparedValueSignature);
   }
 
   public String getInputValue() {
@@ -138,10 +158,5 @@ public class InstanceInfo {
 
   public void setTriggeredRoundChangeQuorumRule(int round) {
     this.triggeredRoundChangeQuorumRule.put(round, true);
-  }
-
-  public boolean verifyValueSignature(String publicKeyPath, String value)
-      throws InvalidKeySpecException, NoSuchAlgorithmException {
-    return RSACryptography.verify(publicKeyPath, value, this.valueSignature);
   }
 }
