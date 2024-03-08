@@ -22,7 +22,10 @@ public class InstanceInfo {
   private String valueSignature;
   private int clientId;
 
-  private Map<Integer, Boolean> triggeredPreparedRule;
+  private Map<Integer, Boolean> triggeredPrePrepareRule;
+  private Map<Integer, Boolean> triggeredPrepareRule;
+  private Map<Integer, Boolean> triggeredRoundChangeSetRule;
+  private Map<Integer, Boolean> triggeredRoundChangeQuorumRule;
 
   public InstanceInfo(String inputValue, int clientId, String valueSignature) {
     this.currentRound = 1;
@@ -35,7 +38,10 @@ public class InstanceInfo {
     this.valueSignature = valueSignature;
     this.clientId = clientId;
 
-    this.triggeredPreparedRule = new ConcurrentHashMap<>();
+    this.triggeredPrePrepareRule = new ConcurrentHashMap<>();
+    this.triggeredPrepareRule = new ConcurrentHashMap<>();
+    this.triggeredRoundChangeSetRule = new ConcurrentHashMap<>();
+    this.triggeredRoundChangeQuorumRule = new ConcurrentHashMap<>();
   }
 
   public int getCurrentRound() {
@@ -102,12 +108,36 @@ public class InstanceInfo {
     return clientId;
   }
 
-  public boolean triggeredPreparedRule(int round) {
-    return triggeredPreparedRule.getOrDefault(round, false);
+  public boolean triggeredPrepareRule(int round) {
+    return triggeredPrepareRule.getOrDefault(round, false);
   }
 
-  public void setTriggeredPreparedRule(int round) {
-    this.triggeredPreparedRule.put(round, true);
+  public void setTriggeredPrepareRule(int round) {
+    this.triggeredPrepareRule.put(round, true);
+  }
+
+  public boolean triggeredPrePrepareRule(int round) {
+    return triggeredPrePrepareRule.getOrDefault(round, false);
+  }
+
+  public void setTriggeredPrePrepareRule(int round) {
+    this.triggeredPrePrepareRule.put(round, true);
+  }
+
+  public boolean triggeredRoundChangeSetRule(int round) {
+    return triggeredRoundChangeSetRule.getOrDefault(round, false);
+  }
+
+  public void setTriggeredRoundChangeSetRule(int round) {
+    this.triggeredRoundChangeSetRule.put(round, true);
+  }
+
+  public boolean triggeredRoundChangeQuorumRule(int round) {
+    return triggeredRoundChangeQuorumRule.getOrDefault(round, false);
+  }
+
+  public void setTriggeredRoundChangeQuorumRule(int round) {
+    this.triggeredRoundChangeQuorumRule.put(round, true);
   }
 
   public boolean verifyValueSignature(String publicKeyPath, String value)
