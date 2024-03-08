@@ -632,24 +632,46 @@ public class NodeService implements UDPService {
     }
   }
 
+  // TODO: verify instance, same round, senders
+  public synchronized boolean verifyCommitQuorum(Set<CommitMessage> quorum) {
+    int n = config.getN();
+    int f = (n - 1) / 3;
+    int quorumSize = 2 * f + 1;
+
+    if (quorum.size() < quorumSize) {
+      return false;
+    }
+
+    // All commit messages must have the same value
+    long valueCount = quorum.stream().map(CommitMessage::getValue).distinct().count();
+
+    if (valueCount != 1) {
+      return false;
+    }
+
+    for (CommitMessage commitMessage : quorum) {
+      try {
+        if (!commitMessage.verifyValueSignature(
+            this.clientPublicKeys.get(commitMessage.getClientId()), commitMessage.getValue())) {
+          return false;
+        }
+      } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+        throw new HDSSException(ErrorMessage.SignatureVerificationError);
+      }
+    }
+
+    return true;
+  }
+
   public synchronized void uponCommitQuorum(ConsensusMessage message) {
     CommitQuorumMessage commitQuorumMessage = message.deserializeCommitQuorumMessage();
+
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
     String value = commitQuorumMessage.getQuorum().iterator().next().getValue();
+    int clientId = commitQuorumMessage.getQuorum().iterator().next().getClientId();
 
-    InstanceInfo instance = this.instanceInfo.get(consensusInstance);
-
-    // try {
-    // if (!instance.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
-    // logger
-    // .info(MessageFormat.format("[{0}]: Invalid signature for value `{1}` and client id {2}",
-    // config.getId(), value, clientId));
-    // return;
-    // }
-    // } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-    // throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    // }
+    verifyCommitQuorum(commitQuorumMessage.getQuorum());
 
     if (consensusInstance <= lastDecidedConsensusInstance.get()) {
       logger.info(MessageFormat.format(
@@ -658,9 +680,9 @@ public class NodeService implements UDPService {
       return;
     }
 
-    // logger.info(MessageFormat.format(
-    // "[{0}]: Received COMMIT_QUORUM for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
-    // config.getId(), consensusInstance, round, value, clientId));
+    logger.info(MessageFormat.format(
+        "[{0}]: Received COMMIT_QUORUM for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
+        config.getId(), consensusInstance, round, value, clientId));
 
     stopTimer();
     decide(consensusInstance, round, value);
