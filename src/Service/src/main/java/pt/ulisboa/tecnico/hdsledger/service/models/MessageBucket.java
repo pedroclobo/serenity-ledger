@@ -4,9 +4,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
@@ -16,12 +18,15 @@ import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 
 public class MessageBucket {
 
-  // f+1
   private final int f_1;
-  // Quorum size
   private final int quorumSize;
+
   // Instance -> Round -> Sender ID -> Consensus message
-  private final Map<Integer, Map<Integer, Map<Integer, ConsensusMessage>>> bucket =
+  private final Map<Integer, Map<Integer, Map<Integer, ConsensusMessage>>> prepareBucket =
+      new ConcurrentHashMap<>();
+  private final Map<Integer, Map<Integer, Map<Integer, ConsensusMessage>>> commitBucket =
+      new ConcurrentHashMap<>();
+  private final Map<Integer, Map<Integer, Map<Integer, ConsensusMessage>>> roundChangeBucket =
       new ConcurrentHashMap<>();
 
   public MessageBucket(int nodeCount) {
@@ -41,106 +46,59 @@ public class MessageBucket {
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
 
+    Map<Integer, Map<Integer, Map<Integer, ConsensusMessage>>> bucket;
+    if (message.getType() == ConsensusMessage.Type.PREPARE) {
+      bucket = prepareBucket;
+    } else if (message.getType() == ConsensusMessage.Type.COMMIT) {
+      bucket = commitBucket;
+    } else if (message.getType() == ConsensusMessage.Type.ROUND_CHANGE) {
+      bucket = roundChangeBucket;
+    } else {
+      throw new IllegalArgumentException("Invalid message type");
+    }
+
     bucket.putIfAbsent(consensusInstance, new ConcurrentHashMap<>());
     bucket.get(consensusInstance).putIfAbsent(round, new ConcurrentHashMap<>());
     bucket.get(consensusInstance).get(round).put(message.getSenderId(), message);
   }
 
-  public Optional<String> hasValidPrepareQuorum(int nodeId, int instance, int round) {
-    // Create mapping of value to frequency
-    HashMap<String, Integer> frequency = new HashMap<>();
-    bucket.get(instance).get(round).values().forEach((message) -> {
-      PrepareMessage prepareMessage = message.deserializePrepareMessage();
-      String value = prepareMessage.getValue();
-      frequency.put(value, frequency.getOrDefault(value, 0) + 1);
-    });
-
-    // Only one value (if any, thus the optional) will have a frequency
-    // greater than or equal to the quorum size
-    return frequency.entrySet().stream()
-        .filter((Map.Entry<String, Integer> entry) -> entry.getValue() >= quorumSize)
-        .map((Map.Entry<String, Integer> entry) -> entry.getKey()).findFirst();
+  public boolean justifyPrePrepare(int consensusInstance, int round, String value) {
+    return round == 1 || hasUnpreparedRoundChangeQuorum(consensusInstance, round)
+        || hasPreparedQuorumWithHighestPreparedEqualToRoundChangeQuorum(consensusInstance, round);
   }
 
-  public Pair<Boolean, Optional<Set<CommitMessage>>> hasValidCommitQuorum(int nodeId, int instance,
-      int round) {
-    // Create mapping of value to frequency
-    HashMap<String, Integer> frequency = new HashMap<>();
-    HashMap<String, Set<CommitMessage>> commitQuorum = new HashMap<>();
-    bucket.get(instance).get(round).values().forEach((message) -> {
-      CommitMessage commitMessage = message.deserializeCommitMessage();
-      String value = commitMessage.getValue();
-      frequency.put(value, frequency.getOrDefault(value, 0) + 1);
-      commitQuorum.putIfAbsent(value, ConcurrentHashMap.newKeySet());
-      commitQuorum.get(value).add(commitMessage);
-    });
-
-    // Only one value (if any, thus the optional) will have a frequency
-    // greater than or equal to the quorum size
-    Optional<String> value = frequency.entrySet().stream()
-        .filter((Map.Entry<String, Integer> entry) -> entry.getValue() >= quorumSize)
-        .map((Map.Entry<String, Integer> entry) -> entry.getKey()).findFirst();
-
-    if (value.isEmpty()) {
-      return new Pair<>(false, Optional.empty());
-    }
-    return new Pair<>(true, Optional.of(commitQuorum.get(value.get())));
-  }
-
-  public Optional<Integer> hasValidRoundChangeSet(int instance, int round) {
-    // Message count for current instance
-    int messageCountForInstance = bucket.get(instance).values().stream()
-        .flatMap(roundMessages -> roundMessages.values().stream()).mapToInt(message -> 1).sum();
-
-    if (messageCountForInstance < f_1) {
-      return Optional.empty();
-    }
-
-    // Message count of message for current instance with round superior to current round
-    int messageCountWithSuperiorRound = bucket.get(instance).values().stream()
-        .flatMap(roundMessages -> roundMessages.values().stream())
-        .map((message) -> message.getRound()).filter((messageRound) -> messageRound > round)
-        .mapToInt(r -> 1).sum();
-
-    if (messageCountWithSuperiorRound < f_1) {
-      return Optional.empty();
-    }
-
-    // Minimum round
-    return bucket.get(instance).values().stream()
-        .flatMap(roundMessages -> roundMessages.values().stream())
-        .map((message) -> message.getRound()).min(Integer::compareTo);
-  }
-
-  public boolean hasRoundChangeQuorumUnprepared(int instance, int round) {
-    List<RoundChangeMessage> messages = bucket.get(instance).get(round).values().stream()
+  private boolean hasUnpreparedRoundChangeQuorum(int instance, int round) {
+    List<RoundChangeMessage> messages = roundChangeBucket.get(instance).get(round).values().stream()
         .map((message) -> message.deserializeRoundChangeMessage()).collect(Collectors.toList());
 
     return messages.stream()
         .map((message) -> new Pair<Optional<Integer>, Optional<String>>(message.getPreparedRound(),
             message.getPreparedValue()))
-        .filter((pair) -> !pair.getFirst().isPresent() && !pair.getSecond().isPresent())
+        .filter((pair) -> pair.getFirst().isEmpty() && pair.getSecond().isEmpty())
         .count() >= quorumSize;
   }
 
-  public boolean hasPreparedQuorum(int instance, int round, String value) {
-    List<Pair<ConsensusMessage, PrepareMessage>> messages = bucket.get(instance).get(round).values()
-        .stream().map((message) -> new Pair<>(message, message.deserializePrepareMessage()))
-        .collect(Collectors.toList());
+  private boolean hasPreparedQuorumWithHighestPreparedEqualToRoundChangeQuorum(int instance,
+      int round) {
+    Optional<RoundValueClientSignature> highestPrepared = highestPrepared(instance, round);
 
-    return messages.stream()
-        .map(pair -> new Pair<>(pair.getFirst().getRound(), pair.getSecond().getValue()))
-        .filter(pair -> pair.getFirst() == round && pair.getSecond().equals(value))
-        .count() >= quorumSize;
+    if (highestPrepared.isEmpty()) {
+      return false;
+    }
+
+    int preparedRound = highestPrepared.get().getRound();
+    String value = highestPrepared.get().getValue();
+
+    return hasPrepareQuorum(instance, preparedRound, value);
   }
 
   // Return the highest prepared of the round change messages
-  public Pair<Optional<Integer>, Optional<String>> highestPrepared(int instance, int round) {
-    List<RoundChangeMessage> messages = bucket.get(instance).get(round).values().stream()
+  private Optional<RoundValueClientSignature> highestPrepared(int instance, int round) {
+    List<RoundChangeMessage> messages = roundChangeBucket.get(instance).get(round).values().stream()
         .map((message) -> message.deserializeRoundChangeMessage()).collect(Collectors.toList());
 
     if (messages.size() < quorumSize) {
-      return new Pair<>(Optional.empty(), Optional.empty());
+      return Optional.empty();
     }
 
     // Get the highest prepared round
@@ -148,31 +106,108 @@ public class MessageBucket {
         messages.stream().map((message) -> message.getPreparedRound()).filter(Optional::isPresent)
             .map(Optional::get).max(Integer::compareTo);
 
-    if (highestPrepared.isEmpty()) {
-      return new Pair<>(Optional.empty(), Optional.empty());
+    // Get the value of the highest prepared round
+    Optional<String> value = messages.stream()
+        .filter((message) -> message.getPreparedRound().isPresent()
+            && message.getPreparedRound().get() == highestPrepared.get())
+        .map((message) -> message.getPreparedValue().get()).findFirst();
+
+    // Get the value signature
+    Optional<String> valueSignature = messages.stream()
+        .filter((message) -> message.getPreparedRound().isPresent()
+            && message.getPreparedRound().get() == highestPrepared.get())
+        .map((message) -> message.getPreparedValueSignature().get()).findFirst();
+
+    // Get the client ID
+    Optional<Integer> clientId = messages.stream()
+        .filter((message) -> message.getPreparedRound().isPresent()
+            && message.getPreparedRound().get() == highestPrepared.get())
+        .map((message) -> message.getPreparedClientId().get()).findFirst();
+
+    if (highestPrepared.isEmpty() || value.isEmpty() || valueSignature.isEmpty()
+        || clientId.isEmpty()) {
+      return Optional.empty();
     }
 
-    return new Pair<>(highestPrepared,
-        messages.stream().filter((message) -> message.getPreparedRound() == highestPrepared)
-            .map((message) -> message.getPreparedValue().get()).findFirst());
+    return Optional.of(new RoundValueClientSignature(highestPrepared.get(), value.get(),
+        clientId.get(), valueSignature.get()));
   }
 
-  public boolean hasUnpreparedRoundChangeQuorum(int instance, int round) {
-    if (bucket.get(instance) == null || bucket.get(instance).get(round) == null
-        || bucket.get(instance).get(round).size() < quorumSize) {
-      return false;
+  public boolean hasPrepareQuorum(int instance, int round, String value) {
+    List<PrepareMessage> messages = prepareBucket.get(instance).get(round).values().stream()
+        .map((message) -> message.deserializePrepareMessage()).collect(Collectors.toList());
+
+    return messages.stream().map(message -> message.getValue())
+        .filter(messageValue -> messageValue.equals(value)).count() >= quorumSize;
+  }
+
+  private Set<CommitMessage> getCommitQuorum(int instance, int round, String value) {
+    return commitBucket.get(instance).get(round).values().stream()
+        .map((message) -> message.deserializeCommitMessage())
+        .filter((message) -> message.getValue().equals(value)).collect(Collectors.toSet());
+  }
+
+  public Pair<Boolean, Optional<Set<CommitMessage>>> hasCommitQuorum(int instance) {
+    List<ConsensusMessage> messages = commitBucket.get(instance).values().stream()
+        .flatMap(roundMessages -> roundMessages.values().stream()).collect(Collectors.toList());
+
+    if (messages.size() < quorumSize) {
+      return new Pair<>(false, Optional.empty());
     }
 
-    long messageCountUnprepared = bucket.get(instance).get(round).values().stream()
-        .map((message) -> message.deserializeRoundChangeMessage())
-        .filter((roundChangeMessage) -> !roundChangeMessage.getPreparedRound().isPresent()
-            && !roundChangeMessage.getPreparedValue().isPresent())
-        .count();
+    List<Pair<String, Integer>> messagePairs = messages.stream().map(
+        (message) -> new Pair<>(message.deserializeCommitMessage().getValue(), message.getRound()))
+        .collect(Collectors.toList());
 
-    return messageCountUnprepared >= quorumSize;
+    Map<Pair<String, Integer>, Long> frequency = messagePairs.stream()
+        .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+    // Find value with frequency greater than or equal to quorum size
+    Optional<Pair<String, Integer>> valueRound = frequency.entrySet().stream().filter((entry) -> {
+      return entry.getValue() >= quorumSize;
+    }).map((entry) -> entry.getKey()).findFirst();
+
+    if (valueRound.isEmpty()) {
+      return new Pair<>(false, Optional.empty());
+    }
+
+    int round = valueRound.get().getSecond();
+    String value = valueRound.get().getFirst();
+
+    return new Pair<>(true, Optional.of(getCommitQuorum(instance, round, value)));
+  }
+
+  public Pair<Boolean, Optional<RoundValueClientSignature>> hasRoundChangeQuorum(int instance,
+      int round) {
+    Optional<RoundValueClientSignature> highestPrepared = highestPrepared(instance, round);
+
+    return new Pair<>(
+        roundChangeBucket.get(instance).get(round).values().size() >= quorumSize
+            || hasUnpreparedRoundChangeQuorum(instance, round)
+            || hasPreparedQuorumWithHighestPreparedEqualToRoundChangeQuorum(instance, round),
+        highestPrepared);
+  }
+
+  // Return the round change quorum for the instance, returns the round if the quorum exists
+  private Optional<Integer> hasRoundChangeSetWithRoundGreaterThan(int instance, int round) {
+    List<ConsensusMessage> messages = roundChangeBucket.get(instance).values().stream()
+        .flatMap(roundMessages -> roundMessages.values().stream()).filter((message) -> {
+          return message.getRound() > round;
+        }).collect(Collectors.toList());
+
+    if (messages.size() < f_1) {
+      return Optional.empty();
+    }
+
+    // Return the minimum round
+    return messages.stream().map((message) -> message.getRound()).min(Integer::compareTo);
+  }
+
+  public Optional<Integer> hasValidRoundChangeSet(int instance, int round) {
+    return hasRoundChangeSetWithRoundGreaterThan(instance, round);
   }
 
   public Map<Integer, ConsensusMessage> getMessages(int instance, int round) {
-    return bucket.get(instance).get(round);
+    return prepareBucket.get(instance).get(round);
   }
 }

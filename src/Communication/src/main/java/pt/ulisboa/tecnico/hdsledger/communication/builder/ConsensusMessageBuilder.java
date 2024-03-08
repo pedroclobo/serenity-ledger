@@ -36,16 +36,6 @@ public class ConsensusMessageBuilder {
     return this;
   }
 
-  public ConsensusMessageBuilder setValueSignature(String valueSignature) {
-    instance.setValueSignature(valueSignature);
-    return this;
-  }
-
-  public ConsensusMessageBuilder setClientId(int clientId) {
-    instance.setClientId(clientId);
-    return this;
-  }
-
   public ConsensusMessage build() {
     return instance;
   }
