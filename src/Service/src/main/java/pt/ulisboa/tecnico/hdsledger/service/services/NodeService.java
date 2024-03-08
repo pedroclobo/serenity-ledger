@@ -578,7 +578,8 @@ public class NodeService implements UDPService {
 
     if ((this.config.isLeader(consensusInstance, round)
         || this.config.getByzantineBehavior() == ByzantineBehavior.FakeLeader)
-        && (unpreparedQuorum || preparedQuorum)) {
+        && (unpreparedQuorum || preparedQuorum)
+        && round == instanceInfo.get(consensusInstance).getCurrentRound()) {
 
       InstanceInfo instance = instanceInfo.get(consensusInstance);
       int highestPreparedRound = instance.getCurrentRound();
