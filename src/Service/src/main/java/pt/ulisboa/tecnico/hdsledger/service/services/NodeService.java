@@ -455,7 +455,7 @@ public class NodeService implements UDPService {
       decide(consensusInstance, round, value);
 
       // Notify clients
-      Message messageToClient = new AppendMessage(config.getId(), Message.Type.APPEND, value);
+      Message messageToClient = new AppendMessage(config.getId(), value);
       clientLink.broadcast(messageToClient);
     } else {
       logger.info(

@@ -14,8 +14,8 @@ public class AppendMessage extends Message {
   private String value;
   private String valueSignature;
 
-  public AppendMessage(int senderId, Type type, String value) {
-    super(senderId, type);
+  public AppendMessage(int senderId, String value) {
+    super(senderId, Message.Type.APPEND);
     this.value = value;
   }
 

@@ -13,7 +13,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
+import pt.ulisboa.tecnico.hdsledger.communication.TransferMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.BalanceMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
@@ -39,8 +41,25 @@ public class Library {
     this.acks = new ConcurrentHashMap<>();
   }
 
+  public void transfer(String sourcePublicKeyPath, String destinationPublicKeyPath, int amount) {
+    Message message = new TransferMessage(clientConfig.getId(), sourcePublicKeyPath,
+        destinationPublicKeyPath, amount);
+
+    link.smallMulticast(message);
+
+    // TODO: wait for acknowledgments
+  }
+
+  public void check_balance(String accountPublicKeyPath) {
+    Message message = new BalanceMessage(clientConfig.getId(), accountPublicKeyPath);
+
+    link.smallMulticast(message);
+
+    // TODO: wait for acknowledgments
+  }
+
   public void append(String value) {
-    Message message = new AppendMessage(clientConfig.getId(), Type.APPEND, value);
+    Message message = new AppendMessage(clientConfig.getId(), value);
 
     try {
       ((AppendMessage) message).signValue(clientConfig.getPrivateKeyPath());
