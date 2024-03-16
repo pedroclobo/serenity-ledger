@@ -230,6 +230,7 @@ public class NodeService implements UDPService {
     int clientId = prePrepareMessage.getClientId();
     String valueSignature = prePrepareMessage.getValueSignature();
 
+    // Check if the value is signed by the client
     try {
       if (!prePrepareMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
         logger
@@ -245,6 +246,7 @@ public class NodeService implements UDPService {
       startConsensus(value, clientId, valueSignature);
     }
 
+    // Discard messages from others (λ, r)
     if (consensusInstance != currentConsensusInstance.get()
         || round != instanceInfo.get(consensusInstance).getCurrentRound()) {
       logger.info(MessageFormat.format(
@@ -321,10 +323,13 @@ public class NodeService implements UDPService {
     int clientId = prepareMessage.getClientId();
     String valueSignature = prepareMessage.getValueSignature();
 
-    if (consensusInstance != currentConsensusInstance.get()) {
+    // Discard messages from others (λ, r)
+    if (consensusInstance != currentConsensusInstance.get()
+        || round != instanceInfo.get(consensusInstance).getCurrentRound()) {
       logger.info(MessageFormat.format(
-          "[{0}]: Received PREPARE message for λ = {1} != current λ = {2}, ignoring",
-          config.getId(), consensusInstance, currentConsensusInstance.get()));
+          "[{0}]: Received PREPARE message for (λ, r) = ({1}, {2}) != current (λ, r) = ({3}, {4}), ignoring",
+          config.getId(), consensusInstance, round, currentConsensusInstance.get(),
+          instanceInfo.get(currentConsensusInstance.get()).getCurrentRound()));
       return;
     }
 
