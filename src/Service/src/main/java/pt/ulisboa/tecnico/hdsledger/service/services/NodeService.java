@@ -412,6 +412,17 @@ public class NodeService implements UDPService {
 
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
+    try {
+      if (!commitMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
+        logger
+            .info(MessageFormat.format("[{0}]: Invalid signature for value `{1}` and client id {2}",
+                config.getId(), value, clientId));
+        return;
+      }
+    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+      throw new HDSSException(ErrorMessage.SignatureVerificationError);
+    }
+
     // Within an instance of the algorithm, each upon rule is triggered at most once
     // for any round r
     if (instance.getCommittedRound().isPresent()) {
@@ -424,17 +435,6 @@ public class NodeService implements UDPService {
     logger.info(MessageFormat.format(
         "[{0}]: Received COMMIT message from {1} for (λ, r) = ({2}, {3}) with value `{4}` and client id {5}",
         config.getId(), senderId, consensusInstance, round, value, clientId));
-
-    try {
-      if (!commitMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
-        logger
-            .info(MessageFormat.format("[{0}]: Invalid signature for value `{1}` and client id {2}",
-                config.getId(), value, clientId));
-        return;
-      }
-    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-      throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    }
 
     messages.addMessage(message);
 
