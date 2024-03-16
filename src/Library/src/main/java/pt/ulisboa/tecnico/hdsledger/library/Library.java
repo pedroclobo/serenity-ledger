@@ -28,15 +28,15 @@ public class Library {
 
   private Link link;
   private ProcessConfig clientConfig;
-  private int quorumSize;
   private ConcurrentHashMap<String, CountDownLatch> acks;
+  private ClientMessageBucket clientMessageBucket;
 
   public Library(ProcessConfig[] nodeConfigs, ProcessConfig clientConfig, boolean debug) {
     this.logger = new HDSLogger(Library.class.getName(), debug);
     link = new Link(clientConfig, clientConfig.getPort(), nodeConfigs, AppendMessage.class);
     this.clientConfig = clientConfig;
-    this.quorumSize = (int) Math.floor((nodeConfigs.length + 1) / 2) + 1;
     this.acks = new ConcurrentHashMap<>();
+    this.clientMessageBucket = new ClientMessageBucket(nodeConfigs.length);
   }
 
   public void append(String value) {
@@ -49,8 +49,8 @@ public class Library {
       throw new HDSSException(ErrorMessage.SigningError);
     }
 
-    CountDownLatch latch = new CountDownLatch(quorumSize);
-
+    // When the latch is released, the message was appended by f + 1 nodes
+    CountDownLatch latch = new CountDownLatch(1);
     synchronized (acks) {
       acks.put(value, latch);
     }
@@ -58,7 +58,7 @@ public class Library {
     link.smallMulticast(message);
     listen();
 
-    // Wait for the reply of a quorum of nodes
+    // Wait for the reply of f + 1 nodes
     try {
       latch.await();
     } catch (InterruptedException e) {
@@ -88,8 +88,10 @@ public class Library {
             switch (message.getType()) {
               case APPEND -> {
                 AppendMessage appendMessage = (AppendMessage) message;
-                if (acks.containsKey(appendMessage.getValue())) {
-                  acks.get(appendMessage.getValue()).countDown();
+                if (clientMessageBucket.addAppendMessage(appendMessage)) {
+                  if (acks.containsKey(appendMessage.getValue())) {
+                    acks.get(appendMessage.getValue()).countDown();
+                  }
                 }
                 logger.info(MessageFormat.format("[{0}] - Received APPEND message from {1}",
                     clientConfig.getId(), message.getSenderId()));
