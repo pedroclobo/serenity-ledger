@@ -323,6 +323,18 @@ public class NodeService implements UDPService {
     int clientId = prepareMessage.getClientId();
     String valueSignature = prepareMessage.getValueSignature();
 
+    // Check if the value was signed by the client
+    try {
+      if (!prepareMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
+        logger
+            .info(MessageFormat.format("[{0}]: Invalid signature for value `{1}` and client id {2}",
+                config.getId(), value, clientId));
+        return;
+      }
+    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+      throw new HDSSException(ErrorMessage.SignatureVerificationError);
+    }
+
     // Discard messages from others (λ, r)
     if (consensusInstance != currentConsensusInstance.get()
         || round != instanceInfo.get(consensusInstance).getCurrentRound()) {
@@ -336,17 +348,6 @@ public class NodeService implements UDPService {
     logger.info(MessageFormat.format(
         "[{0}]: Received PREPARE from {1}, (λ, r) = ({2}, {3}) with value `{4}` and client id {5}",
         config.getId(), senderId, consensusInstance, round, value, clientId));
-
-    try {
-      if (!prepareMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
-        logger
-            .info(MessageFormat.format("[{0}]: Invalid signature for value `{1}` and client id {2}",
-                config.getId(), value, clientId));
-        return;
-      }
-    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-      throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    }
 
     // Doesn't add duplicate messages
     messages.addMessage(message);
