@@ -36,7 +36,7 @@ public class ClientService implements UDPService {
   public void append(AppendMessage message) {
     logger.info(MessageFormat.format("[{0}]: Received Append from {1} with value {2}",
         this.config.getId(), message.getSenderId(), message.getValue()));
-    nodeService.startConsensus(message.getValue(), message.getSenderId(),
+    nodeService.waitAndStartConsensus(message.getValue(), message.getSenderId(),
         message.getValueSignature());
   }
 
