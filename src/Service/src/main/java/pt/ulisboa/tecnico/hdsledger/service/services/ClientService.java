@@ -3,7 +3,6 @@ package pt.ulisboa.tecnico.hdsledger.service.services;
 import java.io.IOException;
 import java.net.SocketException;
 import java.text.MessageFormat;
-import java.util.logging.Level;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
@@ -14,8 +13,6 @@ import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureExcepti
 public class ClientService implements UDPService {
 
   private final HDSLogger logger;
-  // Client configurations
-  private final ProcessConfig[] clientConfigs;
   // Node configuration
   private final ProcessConfig config;
   // Link to communicate with nodes
@@ -29,7 +26,6 @@ public class ClientService implements UDPService {
     this.logger = new HDSLogger(ClientService.class.getName(), debug);
     this.link = link;
     this.config = config;
-    this.clientConfigs = clientConfigs;
     this.nodeService = nodeService;
   }
 

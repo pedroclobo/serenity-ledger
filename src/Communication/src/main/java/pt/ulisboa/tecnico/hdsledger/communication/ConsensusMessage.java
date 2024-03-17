@@ -1,8 +1,5 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 

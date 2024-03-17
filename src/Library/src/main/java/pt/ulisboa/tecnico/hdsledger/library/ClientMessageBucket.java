@@ -8,15 +8,12 @@ import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 public class ClientMessageBucket {
 
   private final int f_1;
-  private final int quorumSize;
 
   // Map from value to (ack append messages, senderId)
   private final Map<String, Map<Integer, AppendMessage>> appendBucket = new ConcurrentHashMap<>();
 
   public ClientMessageBucket(int nodeCount) {
-    int f = Math.floorDiv(nodeCount - 1, 3);
-    f_1 = f + 1;
-    quorumSize = Math.floorDiv(nodeCount + f, 2) + 1;
+    f_1 = Math.floorDiv(nodeCount - 1, 3) + 1;
   }
 
   // Returns true if there are f+1 messages from different senders

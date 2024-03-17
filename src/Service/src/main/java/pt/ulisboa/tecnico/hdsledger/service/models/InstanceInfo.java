@@ -1,8 +1,5 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.sql.PreparedStatement;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -10,8 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
-import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
-import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class InstanceInfo {
 

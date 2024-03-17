@@ -3,7 +3,6 @@ package pt.ulisboa.tecnico.hdsledger.utilities;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.InvalidKeyException;
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
