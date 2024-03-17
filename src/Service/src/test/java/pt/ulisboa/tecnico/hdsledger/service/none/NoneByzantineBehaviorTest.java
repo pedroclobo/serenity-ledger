@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.hdsledger.service;
+package pt.ulisboa.tecnico.hdsledger.service.none;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,10 +9,13 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-class DropByzantineBehaviorTest extends ByzantineBehaviorTest {
+import pt.ulisboa.tecnico.hdsledger.service.ByzantineBehaviorTest;
+import pt.ulisboa.tecnico.hdsledger.service.Node;
 
-  public DropByzantineBehaviorTest() {
-    super("drop_config.json", "client_config.json");
+class NoneByzantineBehaviorTest extends ByzantineBehaviorTest {
+
+  public NoneByzantineBehaviorTest() {
+    super("none/none.json", "client_config.json");
   }
 
   @Test
@@ -88,4 +91,5 @@ class DropByzantineBehaviorTest extends ByzantineBehaviorTest {
     assertTrue(valueCount.stream().anyMatch(count -> count >= f + 1),
         "At least f + 1 nodes should have the correct ledger");
   }
+
 }
