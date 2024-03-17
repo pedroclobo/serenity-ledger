@@ -31,10 +31,10 @@ class FakeLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
     }
 
     long sizeCount = sizes.stream().filter(size -> size == 1).count();
-    assertTrue(sizeCount >= quorumSize, "At least a quorum should have ledgers of size " + 1);
+    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + 1);
 
     long valueCount = values.stream().filter(value -> value.equals("value")).count();
-    assertTrue(valueCount >= quorumSize, "At least a quorum should have the correct ledger");
+    assertTrue(valueCount >= f + 1, "At least f + 1 nodes should have the correct ledger");
   }
 
   @Test
@@ -55,10 +55,10 @@ class FakeLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
     }
 
     long sizeCount = sizes.stream().filter(size -> size == 3).count();
-    assertTrue(sizeCount >= quorumSize, "At least a quorum should have ledgers of size " + 3);
+    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + 3);
 
     long valueCount = values.stream().filter(value -> value.equals("value1value2value3")).count();
-    assertTrue(valueCount >= quorumSize, "At least a quorum should have the correct ledger");
+    assertTrue(valueCount >= f + 1, "At least f + 1 nodes should have the correct ledger");
   }
 
   @Test
@@ -79,14 +79,14 @@ class FakeLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
     }
 
     long sizeCount = sizes.stream().filter(size -> size == 2).count();
-    assertTrue(sizeCount >= quorumSize, "At least a quorum should have ledgers of size " + 2);
+    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + 2);
 
     List<Long> valueCount =
         values.stream().collect(Collectors.groupingBy(s -> s, Collectors.counting())).values()
             .stream().collect(Collectors.toList());
 
-    assertTrue(valueCount.stream().anyMatch(count -> count >= quorumSize),
-        "At least a quorum should have the correct ledger");
+    assertTrue(valueCount.stream().anyMatch(count -> count >= f + 1),
+        "At least f + 1 nodes should have the correct ledger");
   }
 
 }
