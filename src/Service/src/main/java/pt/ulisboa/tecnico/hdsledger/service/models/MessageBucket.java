@@ -134,11 +134,29 @@ public class MessageBucket {
   }
 
   public boolean hasPrepareQuorum(int instance, int round, String value) {
-    List<PrepareMessage> messages = prepareBucket.get(instance).get(round).values().stream()
-        .map((message) -> message.deserializePrepareMessage()).collect(Collectors.toList());
+    try {
+      List<PrepareMessage> messages = prepareBucket.get(instance).get(round).values().stream()
+          .map((message) -> message.deserializePrepareMessage()).collect(Collectors.toList());
 
-    return messages.stream().map(message -> message.getValue())
-        .filter(messageValue -> messageValue.equals(value)).count() >= quorumSize;
+      return messages.stream().map(message -> message.getValue())
+          .filter(messageValue -> messageValue.equals(value)).count() >= quorumSize;
+    } catch (NullPointerException e) {
+      return false;
+    }
+  }
+
+  /*
+   * Returns the prepared quorum
+   */
+  public Optional<Set<ConsensusMessage>> getPrepareQuorum(int instance, int round, String value) {
+    if (!hasPrepareQuorum(instance, round, value)) {
+      return Optional.empty();
+    }
+
+    return Optional.of(prepareBucket.get(instance).get(round).values().stream()
+        .map((message) -> new Pair<>(message, message.deserializePrepareMessage()))
+        .filter((pair) -> pair.getSecond().getValue().equals(value)).map((pair) -> pair.getFirst())
+        .collect(Collectors.toSet()));
   }
 
   private Set<CommitMessage> getCommitQuorum(int instance, int round, String value) {
@@ -177,15 +195,27 @@ public class MessageBucket {
     return new Pair<>(true, Optional.of(getCommitQuorum(instance, round, value)));
   }
 
-  public Pair<Boolean, Optional<RoundValueClientSignature>> hasRoundChangeQuorum(int instance,
-      int round) {
-    Optional<RoundValueClientSignature> highestPrepared = highestPrepared(instance, round);
+  /*
+   * Checks if there is a valid round change quorum for the instance and round This is the predicate
+   * JustifyRoundChange
+   */
+  public boolean hasRoundChangeQuorum(int instance, int round) {
+    return roundChangeBucket.get(instance).get(round).values().size() >= quorumSize
+        || hasUnpreparedRoundChangeQuorum(instance, round)
+        || hasPreparedQuorumWithHighestPreparedEqualToRoundChangeQuorum(instance, round);
+  }
 
-    return new Pair<>(
-        roundChangeBucket.get(instance).get(round).values().size() >= quorumSize
-            || hasUnpreparedRoundChangeQuorum(instance, round)
-            || hasPreparedQuorumWithHighestPreparedEqualToRoundChangeQuorum(instance, round),
-        highestPrepared);
+  /**
+   * Return the highest prepared round, highest prepared value and respective signature that
+   * justifies a round change for instance and round
+   */
+  public Optional<RoundValueClientSignature> getHighestPrepared(int instance, int round) {
+    if (!hasRoundChangeQuorum(instance, round)
+        || !hasPreparedQuorumWithHighestPreparedEqualToRoundChangeQuorum(instance, round)) {
+      return Optional.empty();
+    }
+
+    return highestPrepared(instance, round);
   }
 
   // Return the round change quorum for the instance, returns the round if the quorum exists
