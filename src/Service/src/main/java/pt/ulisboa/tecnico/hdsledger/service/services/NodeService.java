@@ -60,7 +60,7 @@ public class NodeService implements UDPService {
   private final AtomicInteger lastDecidedConsensusInstance = new AtomicInteger(0);
   // Timer
   private Timer timer;
-  private final int TIMEOUT = 1000;
+  private final int TIMEOUT = 2000;
   // Keep track of already started consensus instances
   private final Set<Integer> setupConsensus = ConcurrentHashMap.newKeySet();
   // Synchronize threads when waiting for a new consensus instance
