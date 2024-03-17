@@ -9,7 +9,7 @@ import pt.ulisboa.tecnico.hdsledger.library.Library;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 
-abstract class ByzantineBehaviorTest {
+public abstract class ByzantineBehaviorTest {
 
   private String nodesConfigPath = "src/main/resources/";
   private String clientsConfigPath = "../Client/src/main/resources/";

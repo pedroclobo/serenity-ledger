@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.hdsledger.service;
+package pt.ulisboa.tecnico.hdsledger.service.fake_leader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,10 +9,13 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-public class FakeValueByzantineBehaviorTest extends ByzantineBehaviorTest {
+import pt.ulisboa.tecnico.hdsledger.service.ByzantineBehaviorTest;
+import pt.ulisboa.tecnico.hdsledger.service.Node;
 
-  public FakeValueByzantineBehaviorTest() {
-    super("fake_value_config.json", "client_config.json");
+class FakeLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
+
+  public FakeLeaderByzantineBehaviorTest() {
+    super("fake_leader/fake_leader.json", "client_config.json");
   }
 
   @Test
