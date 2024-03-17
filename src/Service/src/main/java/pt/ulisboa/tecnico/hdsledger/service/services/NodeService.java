@@ -41,8 +41,6 @@ public class NodeService implements UDPService {
   private final HDSLogger logger;
   // Nodes configurations
   private final ProcessConfig[] nodesConfig;
-  // Client configurations
-  private final ProcessConfig[] clientsConfig;
 
   // Current node is leader
   private final ProcessConfig config;
@@ -83,7 +81,6 @@ public class NodeService implements UDPService {
     this.clientLink = clientLink;
     this.config = config;
     this.nodesConfig = nodesConfig;
-    this.clientsConfig = clientsConfig;
 
     // Initialize the client public keys map
     for (ProcessConfig clientConfig : clientsConfig) {

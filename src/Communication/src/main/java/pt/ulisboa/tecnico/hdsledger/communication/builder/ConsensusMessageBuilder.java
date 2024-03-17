@@ -2,7 +2,6 @@ package pt.ulisboa.tecnico.hdsledger.communication.builder;
 
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
-import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
 
 public class ConsensusMessageBuilder {
   private final ConsensusMessage instance;
