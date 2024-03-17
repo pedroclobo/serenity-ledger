@@ -367,6 +367,7 @@ public class NodeService implements UDPService {
       instance.setPreparedClientId(clientId);
       instance.setPreparedValueSignature(valueSignature);
       instance.setTriggeredPrepareRule(round);
+      instance.setPreparedQuorum(messages.getPrepareQuorum(consensusInstance, round, value));
 
       // Get the prepare messages to reply with a commit message
       Collection<ConsensusMessage> sendersMessage =
@@ -509,9 +510,9 @@ public class NodeService implements UDPService {
 
       restartTimer();
 
-      RoundChangeMessage roundChangeMessage =
-          new RoundChangeMessage(instance.getPreparedRound(), instance.getPreparedValue(),
-              instance.getPreparedClientId(), instance.getPreparedValueSignature());
+      RoundChangeMessage roundChangeMessage = new RoundChangeMessage(instance.getPreparedRound(),
+          instance.getPreparedClientId(), instance.getPreparedValue(),
+          instance.getPreparedValueSignature(), instance.getPreparedQuorum());
 
       // TODO: is not instance.getValueSignature() and instance.getClientId() if prepared value is
       // available
@@ -524,17 +525,82 @@ public class NodeService implements UDPService {
     }
   }
 
-  // TODO: do we trust this message?
+  /*
+   * Validates the prepared quorum that is piggybacked on a round change message
+   */
+  public synchronized boolean validatePreparedQuorum(Set<ConsensusMessage> preparedQuorum,
+      int consensusInstance, int round) {
+
+    // Check that each message has a unique sender
+    if (preparedQuorum.stream().map(ConsensusMessage::getSenderId).distinct()
+        .count() != preparedQuorum.size()) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Invalid prepared quorum for (λ, r) = ({1}, {2}), as that are repeated senders, ignoring",
+          config.getId(), consensusInstance, round));
+      return false;
+    }
+
+    // Check that all messages are signed by its sender
+    for (ConsensusMessage m : preparedQuorum) {
+      PrepareMessage pm = m.deserializePrepareMessage();
+
+      try {
+        if (!pm.verifyValueSignature(this.clientPublicKeys.get(pm.getClientId()), pm.getValue())) {
+          logger.info(MessageFormat.format(
+              "[{0}]: Invalid prepared quorum for (λ, r) = ({1}, {2}), as that are invalid signatures, ignoring",
+              config.getId(), consensusInstance, round));
+          return false;
+        }
+      } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+        throw new HDSSException(ErrorMessage.SignatureVerificationError);
+      }
+    }
+
+    // Check that all messages have the same instance
+    if (preparedQuorum.stream().map(ConsensusMessage::getConsensusInstance).distinct()
+        .count() != 1) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Invalid prepared quorum for (λ, r) = ({1}, {2}), as that are different λ, ignoring",
+          config.getId(), consensusInstance, round));
+      return false;
+    }
+
+    // Check that all messages have the same prepared round
+    if (preparedQuorum.stream().map(ConsensusMessage::getRound).distinct().count() != 1) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Invalid prepared quorum for (λ, r) = ({1}, {2}), as that are different r, ignoring",
+          config.getId(), consensusInstance, round));
+      return false;
+    }
+
+    // Check that all messages have the same prepared value
+    if (preparedQuorum.stream().map(ConsensusMessage::deserializePrepareMessage)
+        .map(PrepareMessage::getValue).distinct().count() != 1) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Invalid prepared quorum for (λ, r) = ({1}, {2}), as that are different values, ignoring",
+          config.getId(), consensusInstance, round));
+      return false;
+    }
+
+    return true;
+  }
+
   public synchronized void uponRoundChange(ConsensusMessage message) {
+    RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
     int senderId = message.getSenderId();
+    Optional<Set<ConsensusMessage>> preparedQuorum = roundChangeMessage.getPreparedQuorum();
 
+    // Received ROUND_CHANGE for an old λ
+    // Send commit quorum to sender process
     if (consensusInstance <= lastDecidedConsensusInstance.get()) {
       logger.info(MessageFormat.format(
           "[{0}]: Received ROUND_CHANGE message for old λ = {1}, sending COMMIT_QUORUM message to {2}",
           config.getId(), consensusInstance, senderId));
 
+      // Safe to get() as the instance is already decided
       CommitQuorumMessage commitQuorumMessage =
           new CommitQuorumMessage(instanceInfo.get(consensusInstance).getCommitQuorum().get());
 
@@ -554,28 +620,39 @@ public class NodeService implements UDPService {
 
     messages.addMessage(message);
 
-    Pair<Boolean, Optional<RoundValueClientSignature>> a =
-        messages.hasRoundChangeQuorum(consensusInstance, round);
-
-    boolean validRoundChangeQuorum = a.getFirst();
-
+    // Valid round change quorum
     if ((this.config.isLeader(consensusInstance, round)
         || this.config.getByzantineBehavior() == ByzantineBehavior.FakeLeader)
-        && validRoundChangeQuorum
+        && messages.hasRoundChangeQuorum(consensusInstance, round)
         && round == instanceInfo.get(consensusInstance).getCurrentRound()) {
 
+      // Instance values
       InstanceInfo instance = instanceInfo.get(consensusInstance);
       int highestPreparedRound = instance.getCurrentRound();
       String highestPreparedValue = instance.getInputValue();
       int clientId = instance.getClientId();
       String valueSignature = instance.getValueSignature();
 
+      // Validate prepared quorum
+      if (preparedQuorum.isPresent()
+          && !validatePreparedQuorum(preparedQuorum.get(), consensusInstance, round)) {
+        return;
+      } else if (preparedQuorum.isPresent()) {
+        // Add prepared quorum to messages
+        preparedQuorum.get().forEach(m -> messages.addMessage(m));
+      }
+
+      // Retrieve highestPrepared, if there is one
+      Optional<RoundValueClientSignature> highestPrepared =
+          messages.getHighestPrepared(consensusInstance, round);
+
       // There is a highest prepared value
-      if (a.getSecond().isPresent()) {
-        highestPreparedRound = a.getSecond().get().getRound();
-        highestPreparedValue = a.getSecond().get().getValue();
-        clientId = a.getSecond().get().getClientId();
-        valueSignature = a.getSecond().get().getValueSignature();
+      // Update values
+      if (highestPrepared.isPresent()) {
+        highestPreparedRound = highestPrepared.get().getRound();
+        highestPreparedValue = highestPrepared.get().getValue();
+        clientId = highestPrepared.get().getClientId();
+        valueSignature = highestPrepared.get().getValueSignature();
       }
 
       InstanceInfo instanceInfo = this.instanceInfo.get(currentConsensusInstance.get());
@@ -625,14 +702,16 @@ public class NodeService implements UDPService {
         logger
             .info(MessageFormat.format("[{0}]: Broadcasting ROUND_CHANGE message", config.getId()));
 
-        RoundChangeMessage roundChangeMessage =
-            new RoundChangeMessage(instance.getPreparedRound(), instance.getPreparedValue(),
-                instance.getPreparedClientId(), instance.getPreparedValueSignature());
+        RoundChangeMessage newRoundChangeMessage =
+            new RoundChangeMessage(instance.getPreparedRound(), instance.getPreparedClientId(),
+                instance.getPreparedValue(), instance.getPreparedValueSignature(),
+                instance.getPreparedQuorum());
 
         ConsensusMessage consensusMessage =
             new ConsensusMessageBuilder(config.getId(), Message.Type.ROUND_CHANGE)
                 .setConsensusInstance(consensusInstance).setRound(round)
-                .setMessage(roundChangeMessage.toJson()).build();
+                .setMessage(newRoundChangeMessage.toJson()).build();
+
         this.link.broadcast(consensusMessage);
       }
     }

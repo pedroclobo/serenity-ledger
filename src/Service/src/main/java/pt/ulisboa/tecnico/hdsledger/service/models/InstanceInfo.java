@@ -2,12 +2,15 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.sql.PreparedStatement;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class InstanceInfo {
@@ -17,6 +20,7 @@ public class InstanceInfo {
   private Optional<String> preparedValue;
   private Optional<Integer> preparedClientId;
   private Optional<String> preparedValueSignature;
+  private Optional<Set<ConsensusMessage>> preparedQuorum;
   private String inputValue;
   private int clientId;
   private String valueSignature;
@@ -35,6 +39,7 @@ public class InstanceInfo {
     this.preparedValue = Optional.empty();
     this.preparedClientId = Optional.empty();
     this.preparedValueSignature = Optional.empty();
+    this.preparedQuorum = Optional.empty();
     this.inputValue = inputValue;
     this.clientId = clientId;
     this.valueSignature = valueSignature;
@@ -86,6 +91,14 @@ public class InstanceInfo {
 
   public void setPreparedValueSignature(String preparedValueSignature) {
     this.preparedValueSignature = Optional.of(preparedValueSignature);
+  }
+
+  public Optional<Set<ConsensusMessage>> getPreparedQuorum() {
+    return preparedQuorum;
+  }
+
+  public void setPreparedQuorum(Optional<Set<ConsensusMessage>> preparedQuorum) {
+    this.preparedQuorum = preparedQuorum;
   }
 
   public String getInputValue() {
