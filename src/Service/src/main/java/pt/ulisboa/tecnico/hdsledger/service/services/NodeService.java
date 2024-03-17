@@ -367,6 +367,13 @@ public class NodeService implements UDPService {
         new InstanceInfo(value, clientId, valueSignature));
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
+    if (instance.triggeredPrepareRule(round)) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Already triggered prepare rule for (λ, r) = ({1}, {2}), ignoring", config.getId(),
+          consensusInstance, round));
+      return;
+    }
+
     if (messages.hasPrepareQuorum(consensusInstance, round, value)) {
       logger.info(MessageFormat.format(
           "[{0}]: Received valid PREPARE quorum for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
