@@ -5,6 +5,7 @@ import java.net.SocketException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -26,6 +27,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
+import pt.ulisboa.tecnico.hdsledger.service.models.Ledger;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.service.models.Pair;
 import pt.ulisboa.tecnico.hdsledger.service.models.RoundValueClientSignature;
@@ -66,8 +68,8 @@ public class NodeService implements UDPService {
   // Synchronize threads when waiting for a new consensus instance
   private final Object waitingConsensusLock = new Object();
 
-  // Ledger (for now, just a list of strings)
-  private ArrayList<String> ledger = new ArrayList<String>();
+  // Ledger
+  private Ledger ledger = new Ledger();
 
   // Map between client id and public key
   private final Map<Integer, String> clientPublicKeys = new ConcurrentHashMap<>();
@@ -96,8 +98,8 @@ public class NodeService implements UDPService {
     return this.config;
   }
 
-  public ArrayList<String> getLedger() {
-    return this.ledger;
+  public List<String> getLedger() {
+    return ledger.getLedger();
   }
 
   private boolean isLeader(int id) {
@@ -475,19 +477,10 @@ public class NodeService implements UDPService {
   }
 
   private synchronized void decide(int consensusInstance, int round, String value) {
-    synchronized (ledger) {
+    ledger.addValue(value);
 
-      // Increment size of ledger to accommodate current instance
-      ledger.ensureCapacity(consensusInstance);
-      while (ledger.size() < consensusInstance - 1) {
-        ledger.add("");
-      }
-
-      ledger.add(consensusInstance - 1, value);
-
-      logger.info(MessageFormat.format("[{0}]: Current Ledger: {1}", config.getId(),
-          String.join("", ledger)));
-    }
+    logger.info(MessageFormat.format("[{0}]: Current Ledger: {1}", config.getId(),
+        String.join("", ledger.getLedger())));
 
     lastDecidedConsensusInstance.set(consensusInstance);
 
