@@ -24,7 +24,8 @@ public class InstanceInfo {
   private Optional<Set<CommitMessage>> commitQuorum;
 
   private Map<Integer, Boolean> triggeredPrePrepareRule;
-  private Map<Integer, Boolean> triggeredPrepareRule;
+  private Map<Integer, Boolean> triggeredPrepareQuorumRule;
+  private Map<Integer, Boolean> triggeredCommitQuorumRule;
   private Map<Integer, Boolean> triggeredRoundChangeSetRule;
   private Map<Integer, Boolean> triggeredRoundChangeQuorumRule;
 
@@ -43,7 +44,8 @@ public class InstanceInfo {
     this.commitQuorum = Optional.empty();
 
     this.triggeredPrePrepareRule = new ConcurrentHashMap<>();
-    this.triggeredPrepareRule = new ConcurrentHashMap<>();
+    this.triggeredPrepareQuorumRule = new ConcurrentHashMap<>();
+    this.triggeredCommitQuorumRule = new ConcurrentHashMap<>();
     this.triggeredRoundChangeSetRule = new ConcurrentHashMap<>();
     this.triggeredRoundChangeQuorumRule = new ConcurrentHashMap<>();
   }
@@ -136,20 +138,28 @@ public class InstanceInfo {
     return clientId;
   }
 
-  public boolean triggeredPrepareRule(int round) {
-    return triggeredPrepareRule.getOrDefault(round, false);
-  }
-
-  public void setTriggeredPrepareRule(int round) {
-    this.triggeredPrepareRule.put(round, true);
-  }
-
   public boolean triggeredPrePrepareRule(int round) {
     return triggeredPrePrepareRule.getOrDefault(round, false);
   }
 
   public void setTriggeredPrePrepareRule(int round) {
     this.triggeredPrePrepareRule.put(round, true);
+  }
+
+  public boolean triggeredPrepareQuorumRule(int round) {
+    return triggeredPrepareQuorumRule.getOrDefault(round, false);
+  }
+
+  public void setTriggeredPrepareQuorumRule(int round) {
+    this.triggeredPrepareQuorumRule.put(round, true);
+  }
+
+  public boolean triggeredCommitQuorumRule(int round) {
+    return triggeredCommitQuorumRule.getOrDefault(round, false);
+  }
+
+  public void setTriggeredCommitQuorumRule(int round) {
+    this.triggeredCommitQuorumRule.put(round, true);
   }
 
   public boolean triggeredRoundChangeSetRule(int round) {
