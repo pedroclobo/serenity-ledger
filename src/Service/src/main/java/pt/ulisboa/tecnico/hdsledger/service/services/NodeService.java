@@ -125,18 +125,6 @@ public class NodeService implements UDPService {
     }, TIMEOUT);
   }
 
-  public ConsensusMessage createConsensusMessage(String value, int instance, int round,
-      int clientId, String valueSignature) {
-    PrePrepareMessage prePrepareMessage = new PrePrepareMessage(value, clientId, valueSignature);
-
-    ConsensusMessage consensusMessage =
-        new ConsensusMessageBuilder(config.getId(), Message.Type.PRE_PREPARE)
-            .setConsensusInstance(instance).setRound(round).setMessage(prePrepareMessage.toJson())
-            .build();
-
-    return consensusMessage;
-  }
-
   /*
    * Start an instance of consensus for a value.
    *
@@ -198,19 +186,25 @@ public class NodeService implements UDPService {
 
     // Leader broadcasts PRE-PREPARE message
     InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
+
+    PrePrepareMessage prePrepareMessage = new PrePrepareMessage(value, clientId, valueSignature);
+    ConsensusMessage message = new ConsensusMessageBuilder(config.getId(), Message.Type.PRE_PREPARE)
+        .setConsensusInstance(localConsensusInstance).setRound(instance.getCurrentRound())
+        .setMessage(prePrepareMessage.toJson()).build();
+
     if (this.config.isLeader(localConsensusInstance, instance.getCurrentRound())) {
       logger.info(MessageFormat.format(
           "[{0}]: I'm the leader, sending PRE-PREPARE for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
           config.getId(), localConsensusInstance, instance.getCurrentRound(), value, clientId));
-      this.link.broadcast(this.createConsensusMessage(value, localConsensusInstance,
-          instance.getCurrentRound(), instance.getClientId(), instance.getValueSignature()));
+      this.link.broadcast(message);
+
       // Testing: Fake leader sends PRE-PREPARE
     } else if (this.config.getByzantineBehavior() == ProcessConfig.ByzantineBehavior.FakeLeader) {
       logger.info(MessageFormat.format(
           "[{0}]: I'm the (fake) leader, sending PRE-PREPARE for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
           config.getId(), localConsensusInstance, instance.getCurrentRound(), value, clientId));
-      this.link.broadcast(this.createConsensusMessage(value, localConsensusInstance,
-          instance.getCurrentRound(), instance.getClientId(), instance.getValueSignature()));
+      this.link.broadcast(message);
+
     } else {
       logger.info(MessageFormat.format("[{0}]: I'm not the leader, waiting for PRE-PREPARE",
           config.getId()));
@@ -223,11 +217,8 @@ public class NodeService implements UDPService {
   }
 
   /*
-   * Handle pre prepare messages.
-   *
-   * If the message came from the leader and is justified, broadcast prepare.
-   *
-   * @param message Message to be handled
+   * Check message validity, check pre-prepare justification If message is justified, restart timer
+   * and broadcast prepare
    */
   public synchronized void uponPrePrepare(ConsensusMessage message) {
     PrePrepareMessage prePrepareMessage = message.deserializePrePrepareMessage();
@@ -240,7 +231,12 @@ public class NodeService implements UDPService {
     int clientId = prePrepareMessage.getClientId();
     String valueSignature = prePrepareMessage.getValueSignature();
 
-    // Check if the value is signed by the client
+    // Set instance value if missing
+    if (!setupConsensus.contains(consensusInstance)) {
+      setupConsensus(value, consensusInstance, clientId, valueSignature);
+    }
+
+    // Check if value is signed by the client
     try {
       if (!prePrepareMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
         logger
@@ -250,10 +246,6 @@ public class NodeService implements UDPService {
       }
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
       throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    }
-
-    if (!instanceInfo.containsKey(consensusInstance)) {
-      waitAndStartConsensus(value, clientId, valueSignature);
     }
 
     // Discard messages from others (λ, r)
@@ -266,15 +258,7 @@ public class NodeService implements UDPService {
       return;
     }
 
-    // Justify pre-prepare
-    if (!(isLeader(senderId) && consensusInstance == currentConsensusInstance.get()
-        && round == instanceInfo.get(consensusInstance).getCurrentRound()
-        && messages.justifyPrePrepare(consensusInstance, round, value))) {
-      logger.info(MessageFormat.format("[{0}]: Unjustified PRE-PREPARE for (λ, r) = ({1}, {2})",
-          config.getId(), consensusInstance, round));
-      return;
-    }
-
+    // Don't trigger the pre-prepare rule more than once per round
     if (instanceInfo.get(consensusInstance).triggeredPrePrepareRule(round)) {
       logger.info(MessageFormat.format(
           "[{0}]: Already triggered pre-prepare rule for (λ, r) = ({1}, {2}), ignoring",
@@ -282,24 +266,28 @@ public class NodeService implements UDPService {
       return;
     }
 
-    logger.info(MessageFormat.format(
-        "[{0}]: Received PRE-PREPARE message from {1} for (λ, r) = ({2}, {3}) with value `{4}` and client id {5}",
-        config.getId(), senderId, consensusInstance, round, value, clientId));
-
-    // Set instance value
-    if (!setupConsensus.contains(consensusInstance)) {
-      setupConsensus(value, consensusInstance, clientId, valueSignature);
+    // Justify pre-prepare
+    if (!(isLeader(senderId) && messages.justifyPrePrepare(consensusInstance, round, value))) {
+      logger.info(MessageFormat.format("[{0}]: Unjustified PRE-PREPARE for (λ, r) = ({1}, {2})",
+          config.getId(), consensusInstance, round));
+      return;
     }
+
+    logger.info(MessageFormat.format(
+        "[{0}]: Received valid PRE-PREPARE message from {1} for (λ, r) = ({2}, {3}) with value `{4}` and client id {5}",
+        config.getId(), senderId, consensusInstance, round, value, clientId));
 
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
     instance.setTriggeredPrePrepareRule(round);
 
+    // Restart timer
     restartTimer();
 
+    // Broadcast PREPARE
     PrepareMessage prepareMessage = new PrepareMessage(prePrepareMessage.getValue(), clientId,
         prePrepareMessage.getValueSignature());
 
-    // Byzantine behavior
+    // Testing: Send fake value
     if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
       prepareMessage =
           new PrepareMessage("wrong value", clientId, prePrepareMessage.getValueSignature());
@@ -333,6 +321,11 @@ public class NodeService implements UDPService {
     int clientId = prepareMessage.getClientId();
     String valueSignature = prepareMessage.getValueSignature();
 
+    // Set instance values
+    this.instanceInfo.putIfAbsent(consensusInstance,
+        new InstanceInfo(value, clientId, valueSignature));
+    InstanceInfo instance = this.instanceInfo.get(consensusInstance);
+
     // Check if the value was signed by the client
     try {
       if (!prepareMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
@@ -355,6 +348,14 @@ public class NodeService implements UDPService {
       return;
     }
 
+    // Only trigger the prepare rule once per round
+    if (instance.triggeredPrepareQuorumRule(round)) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Already triggered prepare rule for (λ, r) = ({1}, {2}), ignoring", config.getId(),
+          consensusInstance, round));
+      return;
+    }
+
     logger.info(MessageFormat.format(
         "[{0}]: Received PREPARE from {1}, (λ, r) = ({2}, {3}) with value `{4}` and client id {5}",
         config.getId(), senderId, consensusInstance, round, value, clientId));
@@ -362,18 +363,7 @@ public class NodeService implements UDPService {
     // Doesn't add duplicate messages
     messages.addMessage(message);
 
-    // Set instance values
-    this.instanceInfo.putIfAbsent(consensusInstance,
-        new InstanceInfo(value, clientId, valueSignature));
-    InstanceInfo instance = this.instanceInfo.get(consensusInstance);
-
-    if (instance.triggeredPrepareRule(round)) {
-      logger.info(MessageFormat.format(
-          "[{0}]: Already triggered prepare rule for (λ, r) = ({1}, {2}), ignoring", config.getId(),
-          consensusInstance, round));
-      return;
-    }
-
+    // Valid prepare quorum
     if (messages.hasPrepareQuorum(consensusInstance, round, value)) {
       logger.info(MessageFormat.format(
           "[{0}]: Received valid PREPARE quorum for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
@@ -383,34 +373,29 @@ public class NodeService implements UDPService {
       instance.setPreparedRound(round);
       instance.setPreparedClientId(clientId);
       instance.setPreparedValueSignature(valueSignature);
-      instance.setTriggeredPrepareRule(round);
+      instance.setTriggeredPrepareQuorumRule(round);
       instance.setPreparedQuorum(messages.getPrepareQuorum(consensusInstance, round, value));
-
-      // Get the prepare messages to reply with a commit message
-      Collection<ConsensusMessage> sendersMessage =
-          messages.getMessages(consensusInstance, round).values();
 
       // Broadcast COMMIT
       CommitMessage c = new CommitMessage(value, clientId, valueSignature);
       instance.setCommitMessage(c);
 
-      sendersMessage.forEach(senderMessage -> {
-        ConsensusMessage m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
-            .setConsensusInstance(consensusInstance).setRound(round).setMessage(c.toJson()).build();
+      ConsensusMessage m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
+          .setConsensusInstance(consensusInstance).setRound(round).setMessage(c.toJson()).build();
 
-        if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
-          m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
-              .setConsensusInstance(consensusInstance).setRound(round)
-              .setMessage(new CommitMessage("wrong value", clientId, valueSignature).toJson())
-              .build();
-        }
+      // Testing: Send fake value
+      if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
+        m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
+            .setConsensusInstance(consensusInstance).setRound(round)
+            .setMessage(new CommitMessage("wrong value", clientId, valueSignature).toJson())
+            .build();
+      }
 
-        logger.info(MessageFormat.format(
-            "[{0}]: Broadcasting COMMIT message for (λ, r) = ({1}, {2}) with value `{3}` and client id",
-            config.getId(), consensusInstance, round, value, clientId));
+      logger.info(MessageFormat.format(
+          "[{0}]: Broadcasting COMMIT message for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
+          config.getId(), consensusInstance, round, value, clientId));
 
-        link.broadcast(m);
-      });
+      link.broadcast(m);
     }
   }
 
@@ -430,6 +415,7 @@ public class NodeService implements UDPService {
 
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
+    // Check if the value was signed by the client
     try {
       if (!commitMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
         logger
@@ -441,9 +427,8 @@ public class NodeService implements UDPService {
       throw new HDSSException(ErrorMessage.SignatureVerificationError);
     }
 
-    // Within an instance of the algorithm, each upon rule is triggered at most once
-    // for any round r
-    if (instance.getCommittedRound().isPresent()) {
+    // Don't trigger the commit rule more than once per round
+    if (instance.triggeredCommitQuorumRule(round)) {
       logger.info(MessageFormat.format(
           "[{0}]: Already received COMMIT message for (λ, r) = ({1}, {2}), ignoring",
           config.getId(), consensusInstance, round));
@@ -456,29 +441,30 @@ public class NodeService implements UDPService {
 
     messages.addMessage(message);
 
-    Pair<Boolean, Optional<Set<CommitMessage>>> a = messages.hasCommitQuorum(consensusInstance);
-
-    Boolean hasQuorum = a.getFirst();
-
-    if (hasQuorum) {
+    // Valid COMMIT quorum
+    if (messages.hasCommitQuorum(consensusInstance)) {
 
       logger.info(MessageFormat.format(
           "[{0}]: Received valid COMMIT quorum for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
           config.getId(), consensusInstance, round, value, clientId));
 
-      Set<CommitMessage> commitQuorum = a.getSecond().get();
+      // Safe to get() as hasCommitQuorum returned true
+      Set<CommitMessage> commitQuorum = messages.getCommitQuorum(consensusInstance).get();
 
-      stopTimer();
-
+      // Update instance committed values
       instance = this.instanceInfo.get(consensusInstance);
       instance.setCommittedRound(round);
       instance.setCommitQuorum(commitQuorum);
-
+      instance.setTriggeredCommitQuorumRule(round);
       value = commitQuorum.iterator().next().getValue();
 
+      // Stop the timer
+      stopTimer();
+
+      // Add the value to the ledger
       decide(consensusInstance, round, value);
 
-      // Notify clients
+      // Reply to client
       Message messageToClient = new AppendMessage(config.getId(), Message.Type.APPEND, value);
       clientLink.broadcast(messageToClient);
     } else {
@@ -503,7 +489,7 @@ public class NodeService implements UDPService {
           String.join("", ledger)));
     }
 
-    lastDecidedConsensusInstance.getAndIncrement();
+    lastDecidedConsensusInstance.set(consensusInstance);
 
     logger.info(MessageFormat.format("[{0}]: Decided {1} on (λ, r) = ({2}, {3})", config.getId(),
         value, consensusInstance, round));
@@ -519,20 +505,21 @@ public class NodeService implements UDPService {
     int round = instanceInfo.get(consensusInstance).getCurrentRound() + 1;
 
     synchronized (instanceInfo.get(consensusInstance)) {
+      // Increment current round by 1
       InstanceInfo instance = instanceInfo.get(consensusInstance);
       instance.setCurrentRound(round);
 
       logger.info(MessageFormat.format("[{0}]: Setting local round to {1} on λ = {2}",
           config.getId(), round, consensusInstance));
 
+      // Restart the timer
       restartTimer();
 
+      // Broadcast round change message
       RoundChangeMessage roundChangeMessage = new RoundChangeMessage(instance.getPreparedRound(),
           instance.getPreparedClientId(), instance.getPreparedValue(),
           instance.getPreparedValueSignature(), instance.getPreparedQuorum());
 
-      // TODO: is not instance.getValueSignature() and instance.getClientId() if prepared value is
-      // available
       ConsensusMessage consensusMessage =
           new ConsensusMessageBuilder(config.getId(), Message.Type.ROUND_CHANGE)
               .setConsensusInstance(consensusInstance).setRound(round)
@@ -621,6 +608,7 @@ public class NodeService implements UDPService {
       CommitQuorumMessage commitQuorumMessage =
           new CommitQuorumMessage(instanceInfo.get(consensusInstance).getCommitQuorum().get());
 
+      // Send commit quorum to sender process
       ConsensusMessage consensusMessage =
           new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT_QUORUM)
               .setConsensusInstance(consensusInstance).setRound(round)
@@ -628,6 +616,14 @@ public class NodeService implements UDPService {
 
       this.link.send(senderId, consensusMessage);
 
+      return;
+    }
+
+    if (consensusInstance != currentConsensusInstance.get()) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Received ROUND_CHANGE message for (λ, r) = ({1}, {2}) != current (λ, r) = ({3}, {4}), ignoring",
+          config.getId(), consensusInstance, round, currentConsensusInstance.get(),
+          instanceInfo.get(currentConsensusInstance.get()).getCurrentRound()));
       return;
     }
 
@@ -653,6 +649,9 @@ public class NodeService implements UDPService {
       // Validate prepared quorum
       if (preparedQuorum.isPresent()
           && !validatePreparedQuorum(preparedQuorum.get(), consensusInstance, round)) {
+        logger.info(
+            MessageFormat.format("[{0}]: Invalid prepared quorum for (λ, r) = ({1}, {2}), ignoring",
+                config.getId(), consensusInstance, round));
         return;
       } else if (preparedQuorum.isPresent()) {
         // Add prepared quorum to messages
@@ -690,15 +689,23 @@ public class NodeService implements UDPService {
           "[{0}]: Node is leader, sending PRE-PREPARE message for (λ, r) = ({1}, {2}) with value `{3}` and client id {4}",
           config.getId(), consensusInstance, round, highestPreparedValue, clientId));
 
-      this.link.broadcast(this.createConsensusMessage(highestPreparedValue,
-          currentConsensusInstance.get(), highestPreparedRound, clientId, valueSignature));
+      // Broadcast PRE-PREPARE
+      PrePrepareMessage prePrepareMessage =
+          new PrePrepareMessage(highestPreparedValue, clientId, valueSignature);
+      ConsensusMessage consensusMessage =
+          new ConsensusMessageBuilder(config.getId(), Message.Type.PRE_PREPARE)
+              .setConsensusInstance(currentConsensusInstance.get()).setRound(highestPreparedRound)
+              .setMessage(prePrepareMessage.toJson()).build();
+
+      this.link.broadcast(consensusMessage);
+
       return;
     }
 
-    Optional<Integer> minRound = messages.hasValidRoundChangeSet(consensusInstance, round);
+    InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
-    if (minRound.isPresent()) {
-      InstanceInfo instance = this.instanceInfo.get(consensusInstance);
+    // Valid round change set
+    if (messages.hasValidRoundChangeSet(consensusInstance, instance.getCurrentRound())) {
 
       if (instance.triggeredRoundChangeSetRule(round)) {
         logger.info(MessageFormat.format(
@@ -709,17 +716,21 @@ public class NodeService implements UDPService {
 
       instance.setTriggeredRoundChangeSetRule(round);
 
+      // Safe to get() as hasValidRoundChangeSet returned true
+      int minRound = messages.getMinRoundOfRoundChangeSet(consensusInstance, round).get();
+
       logger.info(MessageFormat.format("[{0}]: Received valid ROUND_CHANGE set", config.getId()));
 
       // Set the current round to the minimum round
       synchronized (instance) {
-        instance.setCurrentRound(minRound.get());
+        instance.setCurrentRound(minRound);
 
         restartTimer();
 
         logger
             .info(MessageFormat.format("[{0}]: Broadcasting ROUND_CHANGE message", config.getId()));
 
+        // Broadcast ROUND_CHANGE message
         RoundChangeMessage newRoundChangeMessage =
             new RoundChangeMessage(instance.getPreparedRound(), instance.getPreparedClientId(),
                 instance.getPreparedValue(), instance.getPreparedValueSignature(),
@@ -732,6 +743,10 @@ public class NodeService implements UDPService {
 
         this.link.broadcast(consensusMessage);
       }
+    } else {
+      logger.info(
+          MessageFormat.format("[{0}]: No valid ROUND_CHANGE set for (λ, r) = ({1}, {2}), ignoring",
+              config.getId(), consensusInstance, round));
     }
   }
 
