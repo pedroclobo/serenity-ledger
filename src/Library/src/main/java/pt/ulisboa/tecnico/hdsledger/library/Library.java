@@ -53,7 +53,7 @@ public class Library {
       acks.put(value, latch);
     }
 
-    link.smallMulticast(message);
+    link.broadcast(message);
     listen();
 
     // Wait for the reply of f + 1 nodes
