@@ -1,8 +1,9 @@
 package pt.ulisboa.tecnico.hdsledger.service;
 
-import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
+import pt.ulisboa.tecnico.hdsledger.service.models.TransactionPool;
 import pt.ulisboa.tecnico.hdsledger.service.services.ClientService;
 import pt.ulisboa.tecnico.hdsledger.service.services.NodeService;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
@@ -29,19 +30,21 @@ public class Node {
   public static void main(String[] args) {
 
     // Parse command line arguments
-    if (args.length != 3) {
-      System.err.println("Usage: java Node <nodeId> <nodesConfigPath> <clientsConfigPath>");
+    if (args.length != 4) {
+      System.err
+          .println("Usage: java Node <nodeId> <nodesConfigPath> <clientsConfigPath> <blockSize>");
       System.exit(1);
     }
     int id = Integer.parseInt(args[0]);
     nodesConfigPath += args[1];
     clientsConfigPath += args[2];
+    int blockSize = Integer.parseInt(args[3]);
 
     // Retrieve nodes and client configurations
     ProcessConfig[] nodeConfigs = ProcessConfigBuilder.fromFile(nodesConfigPath);
     ProcessConfig[] clientConfigs = ProcessConfigBuilder.fromFile(clientsConfigPath);
 
-    Node node = new Node(id, nodeConfigs, clientConfigs, true);
+    Node node = new Node(id, nodeConfigs, clientConfigs, blockSize, true);
     node.start();
 
     // Wait for the user to terminate the program
@@ -50,7 +53,8 @@ public class Node {
     node.shutdown();
   }
 
-  public Node(int id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs, boolean debug) {
+  public Node(int id, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs, int blockSize,
+      boolean debug) {
     this.logger = new HDSLogger(Node.class.getName(), debug);
 
     // Retrieve the current node's config and the leader's config
@@ -62,15 +66,19 @@ public class Node {
         nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
         nodeConfig.getHostname(), nodeConfig.getClientPort(), nodeConfig.isLeader(1, 1)));
 
+    // Transaction pool
+    TransactionPool pool = new TransactionPool(blockSize);
+
     // Abstraction to send and receive messages
     linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs, ConsensusMessage.class);
     linkToClients =
-        new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, AppendMessage.class);
+        new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, ClientMessage.class);
 
     // Services that implement listen from UDPService
     nodeService =
         new NodeService(linkToNodes, linkToClients, nodeConfig, nodeConfigs, clientConfigs, debug);
-    clientService = new ClientService(linkToClients, nodeConfig, nodeConfigs, nodeService, debug);
+    clientService =
+        new ClientService(linkToClients, nodeConfig, clientConfigs, nodeService, pool, debug);
   }
 
   public void start() {

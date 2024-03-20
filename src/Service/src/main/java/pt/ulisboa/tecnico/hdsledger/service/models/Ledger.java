@@ -5,19 +5,19 @@ import java.util.List;
 
 public class Ledger {
 
-  private List<String> ledger;
+  private List<Block> ledger;
 
   public Ledger() {
     ledger = new ArrayList<>();
   }
 
-  public List<String> getLedger() {
+  public List<Block> getLedger() {
     return ledger;
   }
 
-  public void addValue(String value) {
+  public void addValue(Block block) {
     synchronized (ledger) {
-      ledger.add(value);
+      ledger.add(block);
     }
   }
 }

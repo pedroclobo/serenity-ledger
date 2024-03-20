@@ -11,14 +11,13 @@ import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 public class InstanceInfo {
 
   private int currentRound;
+
   private Optional<Integer> preparedRound;
-  private Optional<String> preparedValue;
-  private Optional<Integer> preparedClientId;
-  private Optional<String> preparedValueSignature;
+  private Optional<Block> preparedBlock;
   private Optional<Set<ConsensusMessage>> preparedQuorum;
-  private String inputValue;
-  private int clientId;
-  private String valueSignature;
+
+  private Block inputBlock;
+
   private Optional<CommitMessage> commitMessage;
   private Optional<Integer> committedRound;
   private Optional<Set<CommitMessage>> commitQuorum;
@@ -29,16 +28,15 @@ public class InstanceInfo {
   private Map<Integer, Boolean> triggeredRoundChangeSetRule;
   private Map<Integer, Boolean> triggeredRoundChangeQuorumRule;
 
-  public InstanceInfo(String inputValue, int clientId, String valueSignature) {
+  public InstanceInfo(Block inputBlock) {
     this.currentRound = 1;
+
     this.preparedRound = Optional.empty();
-    this.preparedValue = Optional.empty();
-    this.preparedClientId = Optional.empty();
-    this.preparedValueSignature = Optional.empty();
+    this.preparedBlock = Optional.empty();
     this.preparedQuorum = Optional.empty();
-    this.inputValue = inputValue;
-    this.clientId = clientId;
-    this.valueSignature = valueSignature;
+
+    this.inputBlock = inputBlock;
+
     this.commitMessage = Optional.empty();
     this.committedRound = Optional.empty();
     this.commitQuorum = Optional.empty();
@@ -66,28 +64,12 @@ public class InstanceInfo {
     this.preparedRound = Optional.of(preparedRound);
   }
 
-  public Optional<String> getPreparedValue() {
-    return preparedValue;
+  public Optional<Block> getPreparedBlock() {
+    return preparedBlock;
   }
 
-  public void setPreparedValue(String preparedValue) {
-    this.preparedValue = Optional.of(preparedValue);
-  }
-
-  public Optional<Integer> getPreparedClientId() {
-    return preparedClientId;
-  }
-
-  public void setPreparedClientId(int preparedClientId) {
-    this.preparedClientId = Optional.of(preparedClientId);
-  }
-
-  public Optional<String> getPreparedValueSignature() {
-    return preparedValueSignature;
-  }
-
-  public void setPreparedValueSignature(String preparedValueSignature) {
-    this.preparedValueSignature = Optional.of(preparedValueSignature);
+  public void setPreparedBlock(Block preparedBlock) {
+    this.preparedBlock = Optional.of(preparedBlock);
   }
 
   public Optional<Set<ConsensusMessage>> getPreparedQuorum() {
@@ -98,12 +80,12 @@ public class InstanceInfo {
     this.preparedQuorum = preparedQuorum;
   }
 
-  public String getInputValue() {
-    return inputValue;
+  public Block getInputBlock() {
+    return inputBlock;
   }
 
-  public void setInputValue(String inputValue) {
-    this.inputValue = inputValue;
+  public void setInputBlock(Block inputBlock) {
+    this.inputBlock = inputBlock;
   }
 
   public Optional<CommitMessage> getCommitMessage() {
@@ -128,14 +110,6 @@ public class InstanceInfo {
 
   public void setCommitQuorum(Set<CommitMessage> commitQuorum) {
     this.commitQuorum = Optional.of(commitQuorum);
-  }
-
-  public String getValueSignature() {
-    return valueSignature;
-  }
-
-  public int getClientId() {
-    return clientId;
   }
 
   public boolean triggeredPrePrepareRule(int round) {

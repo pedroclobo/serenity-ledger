@@ -2,6 +2,8 @@ package pt.ulisboa.tecnico.hdsledger.communication;
 
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 
@@ -42,12 +44,14 @@ public class SignedMessage {
 
   public void sign(String privateKeyPath) throws InvalidKeyException, NoSuchAlgorithmException,
       SignatureException, InvalidKeySpecException {
-    this.signature = RSACryptography.sign(privateKeyPath, messageJson);
+    PrivateKey privateKey = RSACryptography.readPrivateKey(privateKeyPath);
+    this.signature = RSACryptography.sign(messageJson, privateKey);
   }
 
   public boolean verify(String publicKeyPath) throws InvalidKeyException, NoSuchAlgorithmException,
       SignatureException, InvalidKeySpecException {
-    return RSACryptography.verify(publicKeyPath, messageJson, this.signature);
+    PublicKey publicKey = RSACryptography.readPublicKey(publicKeyPath);
+    return RSACryptography.verify(messageJson, publicKey, this.signature);
   }
 
   @Override
