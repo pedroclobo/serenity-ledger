@@ -14,6 +14,21 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 public class RSACryptography {
+
+  public static String serializePublicKey(PublicKey key) {
+    return Base64.getEncoder().encodeToString(key.getEncoded());
+  }
+
+  public static PublicKey deserializePublicKey(String key) {
+    byte[] keyBytes = Base64.getDecoder().decode(key);
+    try {
+      return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
   private static byte[] readFromFile(String path) {
     try {
       FileInputStream fis = new FileInputStream(path);
@@ -43,9 +58,8 @@ public class RSACryptography {
     return factory.generatePrivate(spec);
   }
 
-  public static String sign(String privateKeyPath, String data) throws InvalidKeyException,
+  public static String sign(String data, PrivateKey privateKey) throws InvalidKeyException,
       NoSuchAlgorithmException, SignatureException, InvalidKeySpecException {
-    PrivateKey privateKey = readPrivateKey(privateKeyPath);
     java.security.Signature rsa = java.security.Signature.getInstance("SHA256withRSA");
     rsa.initSign(privateKey);
     rsa.update(data.getBytes());
@@ -54,9 +68,8 @@ public class RSACryptography {
     return Base64.getEncoder().encodeToString(signature);
   }
 
-  public static boolean verify(String publicKeyPath, String data, String signature)
+  public static boolean verify(String data, PublicKey publicKey, String signature)
       throws InvalidKeySpecException, NoSuchAlgorithmException {
-    PublicKey publicKey = readPublicKey(publicKeyPath);
     java.security.Signature rsa = java.security.Signature.getInstance("SHA256withRSA");
     try {
       rsa.initVerify(publicKey);

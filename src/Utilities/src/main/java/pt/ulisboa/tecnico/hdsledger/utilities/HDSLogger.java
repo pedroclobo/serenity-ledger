@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.utilities;
 
 import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -17,6 +18,13 @@ public class HDSLogger {
     ConsoleHandler handler = new ConsoleHandler();
     handler.setFormatter(new HDSLogFormatter());
     logger.addHandler(handler);
+
+    try {
+      FileHandler fileHandler = new FileHandler("log", true);
+      fileHandler.setFormatter(new HDSLogFormatter());
+      logger.addHandler(fileHandler);
+    } catch (Exception e) {
+    }
   }
 
   public void info(String message) {

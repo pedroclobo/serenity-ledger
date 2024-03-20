@@ -12,6 +12,7 @@ public class Client {
 
   private static String clientsConfigPath = "src/main/resources/";
   private static String nodesConfigPath = "../Service/src/main/resources/";
+  private static String keysPath = "../PKI/src/main/resources/keys/";
 
   public static void main(String[] args) {
 
@@ -64,13 +65,33 @@ public class Client {
       String[] tokens = line.split(" ");
 
       switch (tokens[0]) {
-        case "append" -> {
+        // case "append" -> {
+        // if (tokens.length == 2) {
+        // System.out.printf("Appending %s to blockchain...%n", tokens[1]);
+        // library.append(keysPath + tokens[1]);
+        // System.out.printf("Value %s was appended with success!%n", tokens[1]);
+        // } else {
+        // System.err.println("Usage: append <str>");
+        // }
+        // }
+        case "balance" -> {
           if (tokens.length == 2) {
-            System.out.printf("Appending %s to blockchain...%n", tokens[1]);
-            library.append(tokens[1]);
-            System.out.printf("Value %s was appended with success!%n", tokens[1]);
+            System.out.println("Retrieving balance...");
+            library.balance(keysPath + tokens[1]);
+            // System.out.printf("Balance: %d%n", balance);
           } else {
-            System.err.println("Usage: append <str>");
+            System.err.println("Usage: balance source");
+          }
+        }
+        case "transfer" -> {
+          if (tokens.length == 4) {
+            System.out.printf("Transferring %s from %s to %s...%n", tokens[3], tokens[1],
+                tokens[2]);
+            library.transfer(tokens[1], tokens[2], Integer.parseInt(tokens[3]));
+            System.out.printf("Transfer of %s from %s to %s was successful!%n", tokens[3],
+                tokens[1], tokens[2]);
+          } else {
+            System.err.println("Usage: transfer <source> <destination> <amount>");
           }
         }
         case "exit" -> {

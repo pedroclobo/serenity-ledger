@@ -11,35 +11,26 @@ import pt.ulisboa.tecnico.hdsledger.utilities.OptionalTypeAdapter;
 public class RoundChangeMessage {
 
   private Optional<Integer> preparedRound;
-  private Optional<Integer> preparedClientId;
-  private Optional<String> preparedValue;
-  private Optional<String> preparedValueSignature;
+  private Optional<String> preparedBlock;
   private Optional<Set<ConsensusMessage>> preparedQuorum;
 
   public RoundChangeMessage() {
     this.preparedRound = Optional.empty();
-    this.preparedClientId = Optional.empty();
-    this.preparedValue = Optional.empty();
-    this.preparedValueSignature = Optional.empty();
+    this.preparedBlock = Optional.empty();
     this.preparedQuorum = Optional.empty();
   }
 
-  public RoundChangeMessage(Optional<Integer> preparedRound, Optional<Integer> preparedClientId,
-      Optional<String> preparedValue, Optional<String> preparedValueSignature,
+  public RoundChangeMessage(Optional<Integer> preparedRound, Optional<String> preparedBlock,
       Optional<Set<ConsensusMessage>> preparedQuorum) {
     this.preparedRound = preparedRound;
-    this.preparedClientId = preparedClientId;
-    this.preparedValue = preparedValue;
-    this.preparedValueSignature = preparedValueSignature;
+    this.preparedBlock = preparedBlock;
     this.preparedQuorum = preparedQuorum;
   }
 
-  public RoundChangeMessage(int preparedRound, int preparedClientId, String preparedValue,
-      String preparedValueSignature, Set<ConsensusMessage> preparedQuorum) {
+  public RoundChangeMessage(int preparedRound, String preparedBlock,
+      Set<ConsensusMessage> preparedQuorum) {
     this.preparedRound = Optional.of(preparedRound);
-    this.preparedClientId = Optional.of(preparedClientId);
-    this.preparedValue = Optional.of(preparedValue);
-    this.preparedValueSignature = Optional.of(preparedValueSignature);
+    this.preparedBlock = Optional.of(preparedBlock);
     this.preparedQuorum = Optional.of(preparedQuorum);
   }
 
@@ -47,16 +38,8 @@ public class RoundChangeMessage {
     return preparedRound;
   }
 
-  public Optional<String> getPreparedValue() {
-    return preparedValue;
-  }
-
-  public Optional<Integer> getPreparedClientId() {
-    return preparedClientId;
-  }
-
-  public Optional<String> getPreparedValueSignature() {
-    return preparedValueSignature;
+  public Optional<String> getPreparedBlock() {
+    return preparedBlock;
   }
 
   public Optional<Set<ConsensusMessage>> getPreparedQuorum() {
