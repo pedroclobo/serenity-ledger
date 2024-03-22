@@ -5,5 +5,12 @@
         "port": 3005,
         "publicKeyPath": "../PKI/src/main/resources/keys/client5.pub",
         "privateKeyPath": "../PKI/src/main/resources/keys/client5.priv"
+    },
+    {
+        "id": 6,
+        "hostname": "localhost",
+        "port": 3006,
+        "publicKeyPath": "../PKI/src/main/resources/keys/client6.pub",
+        "privateKeyPath": "../PKI/src/main/resources/keys/client6.priv"
     }
 ]
