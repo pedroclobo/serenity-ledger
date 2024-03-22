@@ -4,19 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import pt.ulisboa.tecnico.hdsledger.communication.ClientMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
 
 public class TransactionPool {
 
   private int blockSize;
-  private List<ClientMessage> pool;
+  private List<ClientRequest> pool;
 
   public TransactionPool(int blockSize) {
     this.blockSize = blockSize;
     this.pool = new ArrayList<>();
   }
 
-  public void addTransaction(ClientMessage transaction) {
+  public void addTransaction(ClientRequest transaction) {
     synchronized (pool) {
       pool.add(transaction);
     }

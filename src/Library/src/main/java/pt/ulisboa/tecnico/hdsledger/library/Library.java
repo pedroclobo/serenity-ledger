@@ -7,14 +7,17 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.List;
+import java.util.ArrayList;
 
 import com.google.gson.Gson;
 
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
-import pt.ulisboa.tecnico.hdsledger.communication.BalanceMessage;
-import pt.ulisboa.tecnico.hdsledger.communication.ClientMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.BalanceRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.BalanceResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
@@ -30,16 +33,22 @@ public class Library {
 
   private Link link;
   private ProcessConfig clientConfig;
-  private ConcurrentHashMap<String, CountDownLatch> acks;
+  private CountDownLatch latch;
+
+  private int f;
+  private List<ClientResponse> responses;
 
   public Library(ProcessConfig[] nodeConfigs, ProcessConfig clientConfig, boolean debug) {
     this.logger = new HDSLogger(Library.class.getName(), debug);
-    link = new Link(clientConfig, clientConfig.getPort(), nodeConfigs, ClientMessage.class);
+    link = new Link(clientConfig, clientConfig.getPort(), nodeConfigs, ClientResponse.class);
     this.clientConfig = clientConfig;
-    this.acks = new ConcurrentHashMap<>();
+    this.latch = new CountDownLatch(1);
+
+    this.f = (nodeConfigs.length - 1) / 3;
+    this.responses = new ArrayList<>();
   }
 
-  public void balance(String sourcePublicKeyPath) {
+  public BalanceResponse balance(String sourcePublicKeyPath) {
     // Read source public key
     PublicKey sourcePublicKey;
     try {
@@ -49,7 +58,7 @@ public class Library {
     }
 
     // Sign balance request
-    BalanceMessage balanceMessage = new BalanceMessage(sourcePublicKey);
+    BalanceRequest balanceMessage = new BalanceRequest(sourcePublicKey);
     String serializedBalanceMessage = new Gson().toJson(balanceMessage);
     String signature;
     try {
@@ -60,13 +69,50 @@ public class Library {
     }
 
     // Broadcast balance request
-    ClientMessage message =
-        new ClientMessage(clientConfig.getId(), Type.BALANCE, serializedBalanceMessage, signature);
+    ClientRequest message = new ClientRequest(clientConfig.getId(), Type.BALANCE_REQUEST,
+        serializedBalanceMessage, signature);
     link.broadcast(message);
+
+    // Wait for f + 1 responses
+    synchronized (this.latch) {
+      this.latch = new CountDownLatch(1);
+    }
+    try {
+      latch.await();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    BalanceResponse response = this.responses.get(0).deserializeBalanceRequest();
+
+    // Reset response counter
+    this.responses.clear();
+    this.latch = new CountDownLatch(1);
+
+    return response;
   }
 
   public void transfer(String sourcePublicKeyPath, String destinationPublicKeyPath, int amount) {
     throw new UnsupportedOperationException("Unimplemented method 'transfer'");
+  }
+
+  private void uponBalanceResponse(ClientResponse response) {
+    int senderId = response.getSenderId();
+
+    // Verify if the senderId is already in the responses
+    if (this.responses.stream().anyMatch(r -> r.getSenderId() == senderId)) {
+      return;
+    }
+
+    this.responses.add(response);
+
+    // There are enough responses and all have the same amount
+    if (this.responses.size() > f && this.responses.stream()
+        .map(x -> x.deserializeBalanceRequest().getAmount()).distinct().count() == 1) {
+      synchronized (this.latch) {
+        this.latch.countDown();
+      }
+    }
   }
 
   public void listen() {
@@ -85,6 +131,9 @@ public class Library {
             }
 
             switch (message.getType()) {
+              case BALANCE_RESPONSE -> {
+                uponBalanceResponse((ClientResponse) message);
+              }
               case ACK -> {
                 logger.info(MessageFormat.format("[{0}] - Received ACK message from {1}",
                     clientConfig.getId(), message.getSenderId()));

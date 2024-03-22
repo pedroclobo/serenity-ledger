@@ -4,6 +4,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -79,5 +80,15 @@ public class RSACryptography {
       e.printStackTrace();
       return false;
     }
+  }
+
+  public static String digest(String data) throws NoSuchAlgorithmException {
+    byte[] dataBytes = data.getBytes();
+    final String DIGEST_ALGO = "SHA-256";
+    MessageDigest messageDigest = MessageDigest.getInstance(DIGEST_ALGO);
+    messageDigest.update(dataBytes);
+    byte[] digestBytes = messageDigest.digest();
+
+    return Base64.getEncoder().encodeToString(digestBytes);
   }
 }

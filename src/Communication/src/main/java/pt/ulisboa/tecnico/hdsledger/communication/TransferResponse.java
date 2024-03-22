@@ -4,7 +4,7 @@ import java.security.PublicKey;
 
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
-public class TransferMessage {
+public class TransferResponse {
 
   // Serialized source public key
   private String sourcePublicKey;
@@ -14,7 +14,7 @@ public class TransferMessage {
 
   private int amount;
 
-  public TransferMessage(PublicKey sourcePublicKey, PublicKey destinationPublicKey, int amount) {
+  public TransferResponse(PublicKey sourcePublicKey, PublicKey destinationPublicKey, int amount) {
     this.sourcePublicKey = RSACryptography.serializePublicKey(sourcePublicKey);
     this.destinationPublicKey = RSACryptography.serializePublicKey(destinationPublicKey);
     this.amount = amount;

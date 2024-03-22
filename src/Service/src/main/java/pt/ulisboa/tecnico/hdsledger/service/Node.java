@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.service;
 
-import pt.ulisboa.tecnico.hdsledger.communication.ClientMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.service.models.TransactionPool;
@@ -72,7 +73,7 @@ public class Node {
     // Abstraction to send and receive messages
     linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs, ConsensusMessage.class);
     linkToClients =
-        new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, ClientMessage.class);
+        new Link(nodeConfig, nodeConfig.getClientPort(), clientConfigs, ClientRequest.class);
 
     // Services that implement listen from UDPService
     nodeService =

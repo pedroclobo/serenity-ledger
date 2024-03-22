@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.client;
 
+import pt.ulisboa.tecnico.hdsledger.communication.BalanceResponse;
 import pt.ulisboa.tecnico.hdsledger.library.Library;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
@@ -26,10 +27,10 @@ public class Client {
     int clientId = Integer.parseInt(args[0]);
     nodesConfigPath += args[1];
     clientsConfigPath += args[2];
-    boolean activateLogs = false;
+    boolean debug = false;
     if (args.length == 4) {
       // Activate logs
-      activateLogs = args[3].equals("--verbose") || args[3].equals("-v");
+      debug = args[3].equals("--verbose") || args[3].equals("-v");
     }
 
     // Retrieve client and node configurations from files
@@ -47,7 +48,7 @@ public class Client {
 
     // The library is responsible for translating client's requests into
     // messages and sending them to the server
-    Library library = new Library(nodeConfigs, clientConfig, activateLogs);
+    Library library = new Library(nodeConfigs, clientConfig, debug);
     library.listen();
 
     final Scanner scanner = new Scanner(System.in);
@@ -65,24 +66,17 @@ public class Client {
       String[] tokens = line.split(" ");
 
       switch (tokens[0]) {
-        // case "append" -> {
-        // if (tokens.length == 2) {
-        // System.out.printf("Appending %s to blockchain...%n", tokens[1]);
-        // library.append(keysPath + tokens[1]);
-        // System.out.printf("Value %s was appended with success!%n", tokens[1]);
-        // } else {
-        // System.err.println("Usage: append <str>");
-        // }
-        // }
+
         case "balance" -> {
           if (tokens.length == 2) {
             System.out.println("Retrieving balance...");
-            library.balance(keysPath + tokens[1]);
-            // System.out.printf("Balance: %d%n", balance);
+            BalanceResponse response = library.balance(keysPath + tokens[1]);
+            System.out.printf("Balance: %d%n", response.getAmount());
           } else {
             System.err.println("Usage: balance source");
           }
         }
+
         case "transfer" -> {
           if (tokens.length == 4) {
             System.out.printf("Transferring %s from %s to %s...%n", tokens[3], tokens[1],
@@ -94,12 +88,14 @@ public class Client {
             System.err.println("Usage: transfer <source> <destination> <amount>");
           }
         }
+
         case "exit" -> {
           System.out.println("Exiting...");
           scanner.close();
           library.shutdown();
           System.exit(0);
         }
+
         default -> {
           System.err.println("Unrecognized command: " + line);
         }
