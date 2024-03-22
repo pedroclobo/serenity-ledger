@@ -35,20 +35,32 @@ public class Library {
 
   private final HDSLogger logger;
 
-  private Link link;
+  private int clientId;
+  private ProcessConfig[] nodeConfigs;
+  private ProcessConfig[] clientConfigs;
   private ProcessConfig clientConfig;
+
   private int f;
+
+  private Link link;
 
   private AtomicInteger nonce;
 
   private Map<Integer, List<ClientResponse>> responses;
   private Map<Integer, CountDownLatch> latches;
 
-  public Library(ProcessConfig[] nodeConfigs, ProcessConfig clientConfig, boolean debug) {
+  public Library(int clientId, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs,
+      boolean debug) {
     this.logger = new HDSLogger(Library.class.getName(), debug);
-    link = new Link(clientConfig, clientConfig.getPort(), nodeConfigs, ClientResponse.class);
-    this.clientConfig = clientConfig;
+
+    this.clientId = clientId;
+    this.nodeConfigs = nodeConfigs;
+    this.clientConfigs = clientConfigs;
+    this.clientConfig = clientConfigs[clientId - nodeConfigs.length - 1];
+
     this.f = (nodeConfigs.length - 1) / 3;
+
+    this.link = new Link(clientConfig, clientConfig.getPort(), nodeConfigs, ClientResponse.class);
 
     this.nonce = new AtomicInteger(0);
 
@@ -56,6 +68,10 @@ public class Library {
     this.latches = new ConcurrentHashMap<>();
 
     listen();
+  }
+
+  public BalanceResponse balance(int sourceId) {
+    return balance(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath());
   }
 
   public BalanceResponse balance(String sourcePublicKeyPath) {
@@ -107,6 +123,11 @@ public class Library {
     this.latches.remove(nonce);
 
     return response;
+  }
+
+  public void transfer(int sourceId, int destinationId, int amount) {
+    transfer(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath(),
+        clientConfigs[destinationId - nodeConfigs.length - 1].getPublicKeyPath(), amount);
   }
 
   public void transfer(String sourcePublicKeyPath, String destinationPublicKeyPath, int amount) {
