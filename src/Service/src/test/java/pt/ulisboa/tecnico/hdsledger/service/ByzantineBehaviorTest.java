@@ -62,7 +62,9 @@ public abstract class ByzantineBehaviorTest {
     for (ProcessConfig nodeConfig : newNodesConfig) {
       nodeConfig.setPort(nodeConfig.getClientPort());
     }
-    library = new Library(newNodesConfig, newClientsConfig[0], false);
+
+    int clientId = newClientsConfig[0].getId();
+    library = new Library(clientId, newNodesConfig, newClientsConfig, false);
   }
 
   @AfterEach

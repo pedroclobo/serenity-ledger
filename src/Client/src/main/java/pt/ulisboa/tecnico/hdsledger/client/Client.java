@@ -42,13 +42,9 @@ public class Client {
       nodeConfig.setPort(nodeConfig.getClientPort());
     }
 
-    // Retrieve the current client's config
-    ProcessConfig clientConfig = Arrays.stream(clientConfigs).filter(c -> c.getId() == clientId)
-        .findFirst().orElseThrow(() -> new HDSSException(ErrorMessage.ConfigFileNotFound));
-
     // The library is responsible for translating client's requests into
     // messages and sending them to the server
-    Library library = new Library(nodeConfigs, clientConfig, debug);
+    Library library = new Library(clientId, nodeConfigs, clientConfigs, debug);
 
     final Scanner scanner = new Scanner(System.in);
 
@@ -69,10 +65,15 @@ public class Client {
         case "balance" -> {
           if (tokens.length == 2) {
             System.out.println("Retrieving balance...");
-            BalanceResponse response = library.balance(keysPath + tokens[1]);
+            BalanceResponse response;
+            if (!isInteger(tokens[1])) {
+              response = library.balance(keysPath + tokens[1]);
+            } else {
+              response = library.balance(Integer.parseInt(tokens[1]));
+            }
             System.out.printf("Balance: %d%n", response.getAmount());
           } else {
-            System.err.println("Usage: balance source");
+            System.err.println("Usage: balance <source>");
           }
         }
 
@@ -80,8 +81,13 @@ public class Client {
           if (tokens.length == 4) {
             System.out.printf("Transferring %s from %s to %s...%n", tokens[3], tokens[1],
                 tokens[2]);
-            library.transfer(keysPath + tokens[1], keysPath + tokens[2],
-                Integer.parseInt(tokens[3]));
+            if (!isInteger(tokens[1]) || !isInteger(tokens[2])) {
+              library.transfer(keysPath + tokens[1], keysPath + tokens[2],
+                  Integer.parseInt(tokens[3]));
+            } else {
+              library.transfer(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]),
+                  Integer.parseInt(tokens[3]));
+            }
             System.out.printf("Transfer of %s from %s to %s was successful!%n", tokens[3],
                 tokens[1], tokens[2]);
           } else {
@@ -100,6 +106,15 @@ public class Client {
           System.err.println("Unrecognized command: " + line);
         }
       }
+    }
+  }
+
+  private static boolean isInteger(String s) {
+    try {
+      Integer.parseInt(s);
+      return true;
+    } catch (NumberFormatException e) {
+      return false;
     }
   }
 }
