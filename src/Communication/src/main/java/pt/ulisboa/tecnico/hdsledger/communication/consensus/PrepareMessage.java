@@ -1,13 +1,13 @@
-package pt.ulisboa.tecnico.hdsledger.communication;
+package pt.ulisboa.tecnico.hdsledger.communication.consensus;
 
 import com.google.gson.Gson;
 
-public class CommitMessage {
+public class PrepareMessage {
 
-  // Serialized block
+  // Serilized block
   private String block;
 
-  public CommitMessage(String block) {
+  public PrepareMessage(String block) {
     this.block = block;
   }
 

@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.google.gson.Gson;
 
-import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
 
 public class Block {
 

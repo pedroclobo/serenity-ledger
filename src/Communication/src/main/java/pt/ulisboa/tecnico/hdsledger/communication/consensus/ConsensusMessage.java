@@ -1,8 +1,10 @@
-package pt.ulisboa.tecnico.hdsledger.communication;
+package pt.ulisboa.tecnico.hdsledger.communication.consensus;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import pt.ulisboa.tecnico.hdsledger.communication.Message;
+import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.OptionalTypeAdapter;
 
 public class ConsensusMessage extends Message {

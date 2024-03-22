@@ -9,9 +9,9 @@ import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Optional;
 
-import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
+import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
 import pt.ulisboa.tecnico.hdsledger.service.models.Block;
 import pt.ulisboa.tecnico.hdsledger.service.models.TransactionPool;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;

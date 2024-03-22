@@ -1,9 +1,9 @@
 package pt.ulisboa.tecnico.hdsledger.service;
 
-import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
-import pt.ulisboa.tecnico.hdsledger.communication.ClientResponse;
-import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
+import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.application.ClientResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.consensus.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.service.models.TransactionPool;
 import pt.ulisboa.tecnico.hdsledger.service.services.ClientService;
 import pt.ulisboa.tecnico.hdsledger.service.services.NodeService;

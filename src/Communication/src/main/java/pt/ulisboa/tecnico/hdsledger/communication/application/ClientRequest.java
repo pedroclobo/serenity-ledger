@@ -1,6 +1,9 @@
-package pt.ulisboa.tecnico.hdsledger.communication;
+package pt.ulisboa.tecnico.hdsledger.communication.application;
 
 import com.google.gson.Gson;
+
+import pt.ulisboa.tecnico.hdsledger.communication.Message;
+import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 
 public class ClientRequest extends Message {
 
