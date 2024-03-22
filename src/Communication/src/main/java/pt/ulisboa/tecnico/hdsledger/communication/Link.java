@@ -65,7 +65,7 @@ public class Link {
     try {
       this.socket = new DatagramSocket(port, InetAddress.getByName(config.getHostname()));
     } catch (UnknownHostException | SocketException e) {
-      throw new HDSSException(ErrorMessage.CannotOpenSocket);
+      throw new HDSException(ErrorMessage.CannotOpenSocket);
     }
   }
 
@@ -109,7 +109,7 @@ public class Link {
       try {
         ProcessConfig node = nodes.get(nodeId);
         if (node == null)
-          throw new HDSSException(ErrorMessage.NoSuchNode);
+          throw new HDSException(ErrorMessage.NoSuchNode);
 
         data.setMessageId(messageCounter.getAndIncrement());
 
@@ -175,7 +175,7 @@ public class Link {
         } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
             | InvalidKeySpecException e) {
           e.printStackTrace();
-          throw new HDSSException(ErrorMessage.SigningError);
+          throw new HDSException(ErrorMessage.SigningError);
         }
 
         byte[] buf = new Gson().toJson(signedMessage).getBytes();
@@ -185,7 +185,7 @@ public class Link {
         // Supress message during shutdown
       } catch (IOException e) {
         e.printStackTrace();
-        throw new HDSSException(ErrorMessage.SocketSendingError);
+        throw new HDSException(ErrorMessage.SocketSendingError);
       }
     }).start();
   }
@@ -227,7 +227,7 @@ public class Link {
       } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
           | InvalidKeySpecException e) {
         e.printStackTrace();
-        throw new HDSSException(ErrorMessage.SignatureVerificationError);
+        throw new HDSException(ErrorMessage.SignatureVerificationError);
       }
     }
 
@@ -235,7 +235,7 @@ public class Link {
     int messageId = message.getMessageId();
 
     if (!nodes.containsKey(senderId))
-      throw new HDSSException(ErrorMessage.NoSuchNode);
+      throw new HDSException(ErrorMessage.NoSuchNode);
 
     // Handle ACKS, since it's possible to receive multiple acks from the same
     // message
