@@ -13,13 +13,13 @@ import java.util.ArrayList;
 
 import com.google.gson.Gson;
 
-import pt.ulisboa.tecnico.hdsledger.communication.Message;
-import pt.ulisboa.tecnico.hdsledger.communication.BalanceRequest;
-import pt.ulisboa.tecnico.hdsledger.communication.BalanceResponse;
-import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
-import pt.ulisboa.tecnico.hdsledger.communication.ClientResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
+import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
+import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.application.ClientResponse;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;

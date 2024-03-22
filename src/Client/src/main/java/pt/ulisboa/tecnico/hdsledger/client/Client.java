@@ -1,6 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.client;
 
-import pt.ulisboa.tecnico.hdsledger.communication.BalanceResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
 import pt.ulisboa.tecnico.hdsledger.library.Library;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;

@@ -1,7 +1,9 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
+
 import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
+import pt.ulisboa.tecnico.hdsledger.communication.consensus.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
 

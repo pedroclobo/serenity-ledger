@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
 
 public class TransactionPool {
 

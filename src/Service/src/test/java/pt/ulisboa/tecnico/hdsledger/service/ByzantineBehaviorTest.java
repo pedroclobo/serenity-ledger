@@ -10,7 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import pt.ulisboa.tecnico.hdsledger.communication.BalanceResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
 import pt.ulisboa.tecnico.hdsledger.library.Library;
 import pt.ulisboa.tecnico.hdsledger.service.models.Block;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
