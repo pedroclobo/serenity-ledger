@@ -4,10 +4,16 @@ import com.google.gson.Gson;
 
 public class BalanceResponse {
 
+  private int nonce;
   private int amount;
 
-  public BalanceResponse(int amount) {
+  public BalanceResponse(int nonce, int amount) {
+    this.nonce = nonce;
     this.amount = amount;
+  }
+
+  public int getNonce() {
+    return nonce;
   }
 
   public int getAmount() {

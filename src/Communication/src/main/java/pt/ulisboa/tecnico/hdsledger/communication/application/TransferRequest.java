@@ -6,6 +6,8 @@ import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class TransferRequest {
 
+  private int nonce;
+
   // Serialized source public key
   private String sourcePublicKey;
 
@@ -14,10 +16,16 @@ public class TransferRequest {
 
   private int amount;
 
-  public TransferRequest(PublicKey sourcePublicKey, PublicKey destinationPublicKey, int amount) {
+  public TransferRequest(int nonce, PublicKey sourcePublicKey, PublicKey destinationPublicKey,
+      int amount) {
+    this.nonce = nonce;
     this.sourcePublicKey = RSACryptography.serializePublicKey(sourcePublicKey);
     this.destinationPublicKey = RSACryptography.serializePublicKey(destinationPublicKey);
     this.amount = amount;
+  }
+
+  public int getNonce() {
+    return nonce;
   }
 
   public PublicKey getSourcePublicKey() {

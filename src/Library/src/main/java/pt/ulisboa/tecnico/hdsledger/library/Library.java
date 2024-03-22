@@ -7,8 +7,11 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
 
 import com.google.gson.Gson;
@@ -20,6 +23,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceRequest;
 import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
 import pt.ulisboa.tecnico.hdsledger.communication.application.ClientResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.application.TransferRequest;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
@@ -33,24 +37,31 @@ public class Library {
 
   private Link link;
   private ProcessConfig clientConfig;
-  private CountDownLatch latch;
-
   private int f;
-  private List<ClientResponse> responses;
+
+  private AtomicInteger nonce;
+
+  private Map<Integer, List<ClientResponse>> responses;
+  private Map<Integer, CountDownLatch> latches;
 
   public Library(ProcessConfig[] nodeConfigs, ProcessConfig clientConfig, boolean debug) {
     this.logger = new HDSLogger(Library.class.getName(), debug);
     link = new Link(clientConfig, clientConfig.getPort(), nodeConfigs, ClientResponse.class);
     this.clientConfig = clientConfig;
-    this.latch = new CountDownLatch(1);
-
     this.f = (nodeConfigs.length - 1) / 3;
-    this.responses = new ArrayList<>();
+
+    this.nonce = new AtomicInteger(0);
+
+    this.responses = new ConcurrentHashMap<>();
+    this.latches = new ConcurrentHashMap<>();
 
     listen();
   }
 
   public BalanceResponse balance(String sourcePublicKeyPath) {
+    // Grab nonce of the request
+    int nonce = this.nonce.getAndIncrement();
+
     // Read source public key
     PublicKey sourcePublicKey;
     try {
@@ -60,7 +71,7 @@ public class Library {
     }
 
     // Sign balance request
-    BalanceRequest balanceMessage = new BalanceRequest(sourcePublicKey);
+    BalanceRequest balanceMessage = new BalanceRequest(nonce, sourcePublicKey);
     String serializedBalanceMessage = new Gson().toJson(balanceMessage);
     String signature;
     try {
@@ -70,49 +81,164 @@ public class Library {
       throw new HDSSException(ErrorMessage.SigningError);
     }
 
+    // Create latch and response vector for this request
+    this.responses.put(nonce, new ArrayList<>());
+    this.latches.put(nonce, new CountDownLatch(1));
+
     // Broadcast balance request
+    logger.info(MessageFormat.format("[{0}] - Broadcasting balance request for {1} with nonce {2}",
+        clientConfig.getId(), sourcePublicKeyPath, nonce));
     ClientRequest message = new ClientRequest(clientConfig.getId(), Type.BALANCE_REQUEST,
         serializedBalanceMessage, signature);
     link.broadcast(message);
 
     // Wait for f + 1 responses
-    synchronized (this.latch) {
-      this.latch = new CountDownLatch(1);
-    }
     try {
-      latch.await();
+      this.latches.get(nonce).await();
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
 
-    BalanceResponse response = this.responses.get(0).deserializeBalanceRequest();
+    // Grab the first response
+    BalanceResponse response = this.responses.get(nonce).get(0).deserializeBalanceRequest();
 
-    // Reset response counter
-    this.responses.clear();
-    this.latch = new CountDownLatch(1);
+    // Clean up
+    this.responses.remove(nonce);
+    this.latches.remove(nonce);
 
     return response;
   }
 
   public void transfer(String sourcePublicKeyPath, String destinationPublicKeyPath, int amount) {
-    throw new UnsupportedOperationException("Unimplemented method 'transfer'");
+    // Grab nonce of the request
+    int nonce = this.nonce.getAndIncrement();
+
+    // Verify that amount is positive
+    if (amount <= 0) {
+      throw new HDSSException(ErrorMessage.InvalidAmount);
+    }
+
+    // Read source public key
+    PublicKey sourcePublicKey;
+    try {
+      sourcePublicKey = RSACryptography.readPublicKey(sourcePublicKeyPath);
+    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+      throw new HDSSException(ErrorMessage.ErrorReadingPublicKey);
+    }
+
+    // Read destination public key
+    PublicKey destinationPublicKey;
+    try {
+      destinationPublicKey = RSACryptography.readPublicKey(destinationPublicKeyPath);
+    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+      throw new HDSSException(ErrorMessage.ErrorReadingPublicKey);
+    }
+
+    // Create latch and response vector for this request
+    this.responses.put(nonce, new ArrayList<>());
+    this.latches.put(nonce, new CountDownLatch(1));
+
+    // Sign transfer request
+    TransferRequest transferRequest =
+        new TransferRequest(nonce, sourcePublicKey, destinationPublicKey, amount);
+    String serializedTransferMessage = new Gson().toJson(transferRequest);
+    String signature;
+    try {
+      PrivateKey privateKey = RSACryptography.readPrivateKey(clientConfig.getPrivateKeyPath());
+      signature = RSACryptography.sign(serializedTransferMessage, privateKey);
+    } catch (Exception e) {
+      throw new HDSSException(ErrorMessage.SigningError);
+    }
+
+    // Broadcast transfer request
+    logger.info(MessageFormat.format(
+        "[{0}] - Broadcasting transfer request from {1} to {2} with amount {3} and nonce {4}",
+        clientConfig.getId(), sourcePublicKeyPath, destinationPublicKeyPath, amount, nonce));
+    ClientRequest message = new ClientRequest(clientConfig.getId(), Type.TRANSFER_REQUEST,
+        serializedTransferMessage, signature);
+    link.broadcast(message);
+
+    // Wait for f + 1 responses
+    try {
+      this.latches.get(nonce).await();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    // Clean up
+    this.responses.remove(nonce);
+    this.latches.remove(nonce);
   }
 
   private void uponBalanceResponse(ClientResponse response) {
     int senderId = response.getSenderId();
+    int nonce = response.deserializeBalanceRequest().getNonce();
 
-    // Verify if the senderId is already in the responses
-    if (this.responses.stream().anyMatch(r -> r.getSenderId() == senderId)) {
+    // The balance was already confirmed
+    if (!this.responses.containsKey(nonce)) {
+      logger.info(MessageFormat.format(
+          "[{0}] - Balance response with nonce {1} from {2} for already confirmed balance",
+          clientConfig.getId(), nonce, senderId));
       return;
     }
 
-    this.responses.add(response);
+    // Verify if the senderId is already in the responses
+    if (this.responses.get(nonce).stream().anyMatch(r -> r.getSenderId() == senderId)) {
+      logger.info(MessageFormat.format("[{0}] - Duplicate balance response from {1}",
+          clientConfig.getId(), senderId));
+      return;
+    }
 
+    logger.info(MessageFormat.format("[{0}] - Received balance response from {1}",
+        clientConfig.getId(), response.getSenderId()));
+
+    // Add message to responses
+    this.responses.get(nonce).add(response);
+
+    // TODO: verify that all messages are the same
     // There are enough responses and all have the same amount
-    if (this.responses.size() > f && this.responses.stream()
+    if (this.responses.get(nonce).size() > f && this.responses.get(nonce).stream()
         .map(x -> x.deserializeBalanceRequest().getAmount()).distinct().count() == 1) {
-      synchronized (this.latch) {
-        this.latch.countDown();
+      logger.info(
+          MessageFormat.format("[{0}] - Received enough balance responses", clientConfig.getId()));
+      synchronized (this.latches.get(nonce)) {
+        this.latches.get(nonce).countDown();
+      }
+    }
+  }
+
+  private void uponTransferResponse(ClientResponse response) {
+    int senderId = response.getSenderId();
+    int nonce = response.deserializeTransferRequest().getNonce();
+
+    // The transfer was already confirmed
+    if (!this.responses.containsKey(nonce)) {
+      logger.info(
+          MessageFormat.format("[{0}] - Transfer response from {1} for already confirmed transfer",
+              clientConfig.getId(), senderId));
+      return;
+    }
+
+    // Verify if the senderId is already in the responses
+    if (this.responses.get(nonce).stream().anyMatch(r -> r.getSenderId() == senderId)) {
+      logger.info(MessageFormat.format("[{0}] - Duplicate transfer response from {1}",
+          clientConfig.getId(), senderId));
+      return;
+    }
+
+    logger.info(MessageFormat.format("[{0}] - Received transfer response from {1}",
+        clientConfig.getId(), response.getSenderId()));
+
+    // Add message to responses
+    this.responses.get(nonce).add(response);
+
+    // TODO: verify that all messages are the same
+    // There are enough responses
+    if (this.responses.get(nonce).size() > f) {
+      logger.info(
+          MessageFormat.format("[{0}] - Received enough transfer responses", clientConfig.getId()));
+      synchronized (this.latches.get(nonce)) {
+        this.latches.get(nonce).countDown();
       }
     }
   }
@@ -135,6 +261,11 @@ public class Library {
             switch (message.getType()) {
               case BALANCE_RESPONSE -> {
                 uponBalanceResponse((ClientResponse) message);
+                break;
+              }
+              case TRANSFER_RESPONSE -> {
+                uponTransferResponse((ClientResponse) message);
+                break;
               }
               case ACK -> {
                 logger.info(MessageFormat.format("[{0}] - Received ACK message from {1}",

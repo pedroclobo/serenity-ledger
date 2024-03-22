@@ -104,8 +104,6 @@ public class ClientService implements UDPService {
     pool.addTransaction(message);
 
     startConsensus();
-
-    throw new UnsupportedOperationException();
   }
 
   public void startConsensus() {
