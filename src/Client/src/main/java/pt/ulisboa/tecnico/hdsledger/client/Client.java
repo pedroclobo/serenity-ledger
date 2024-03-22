@@ -49,7 +49,6 @@ public class Client {
     // The library is responsible for translating client's requests into
     // messages and sending them to the server
     Library library = new Library(nodeConfigs, clientConfig, debug);
-    library.listen();
 
     final Scanner scanner = new Scanner(System.in);
 

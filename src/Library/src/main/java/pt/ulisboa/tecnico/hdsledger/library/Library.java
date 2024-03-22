@@ -46,6 +46,8 @@ public class Library {
 
     this.f = (nodeConfigs.length - 1) / 3;
     this.responses = new ArrayList<>();
+
+    listen();
   }
 
   public BalanceResponse balance(String sourcePublicKeyPath) {
