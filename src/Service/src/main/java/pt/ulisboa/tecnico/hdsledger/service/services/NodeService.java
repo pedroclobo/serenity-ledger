@@ -23,6 +23,8 @@ import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceRequest;
 import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
 import pt.ulisboa.tecnico.hdsledger.communication.application.ClientResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.application.TransferRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.application.TransferResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.consensus.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.consensus.CommitQuorumMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.consensus.ConsensusMessage;
@@ -513,9 +515,42 @@ public class NodeService implements UDPService {
           int balance = account.getBalance();
 
           // Send response to client
-          BalanceResponse balanceResponse = new BalanceResponse(balance);
+          BalanceResponse balanceResponse = new BalanceResponse(balanceRequest.getNonce(), balance);
           ClientResponse response = new ClientResponse(config.getId(),
               Message.Type.BALANCE_RESPONSE, balanceResponse.toJson(), "");
+
+          clientLink.send(message.getSenderId(), response);
+
+          break;
+
+        case TRANSFER_REQUEST:
+          TransferRequest transferRequest = message.deserializeTransferMessage();
+          PublicKey sourcePublicKey = transferRequest.getSourcePublicKey();
+          PublicKey destinationPublicKey = transferRequest.getDestinationPublicKey();
+          String sourcePublicKeyHash;
+          String destinationPublicKeyHash;
+
+          try {
+            sourcePublicKeyHash = RSACryptography.digest(sourcePublicKey.toString());
+            destinationPublicKeyHash = RSACryptography.digest(destinationPublicKey.toString());
+          } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error digesting public key");
+          }
+
+          // Extract account and balance
+          Account sourceAccount = ledger.getAccount(sourcePublicKeyHash);
+          Account destinationAccount = ledger.getAccount(destinationPublicKeyHash);
+
+          // Transfer amount
+          int amount = transferRequest.getAmount();
+          sourceAccount.subtractBalance(amount);
+          destinationAccount.addBalance(amount);
+
+          // Send response to client
+          TransferResponse transferResponse = new TransferResponse(transferRequest.getNonce(),
+              sourcePublicKey, destinationPublicKey, amount);
+          response = new ClientResponse(config.getId(), Message.Type.TRANSFER_RESPONSE,
+              transferResponse.toJson(), "");
 
           clientLink.send(message.getSenderId(), response);
 

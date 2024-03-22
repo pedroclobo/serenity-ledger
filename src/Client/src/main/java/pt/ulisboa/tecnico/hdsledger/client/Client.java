@@ -80,7 +80,8 @@ public class Client {
           if (tokens.length == 4) {
             System.out.printf("Transferring %s from %s to %s...%n", tokens[3], tokens[1],
                 tokens[2]);
-            library.transfer(tokens[1], tokens[2], Integer.parseInt(tokens[3]));
+            library.transfer(keysPath + tokens[1], keysPath + tokens[2],
+                Integer.parseInt(tokens[3]));
             System.out.printf("Transfer of %s from %s to %s was successful!%n", tokens[3],
                 tokens[1], tokens[2]);
           } else {

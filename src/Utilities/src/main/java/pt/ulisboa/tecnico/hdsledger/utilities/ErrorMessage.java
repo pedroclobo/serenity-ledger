@@ -12,7 +12,8 @@ public enum ErrorMessage {
                                   "Error while producing signature"), SignatureVerificationError(
                                       "Error while verifying signature"), InvalidSignature(
                                           "Invalid signature"), ErrorReadingPublicKey(
-                                              "Error reading public key");
+                                              "Error reading public key"), InvalidAmount(
+                                                  "Invalid amount");
 
   private final String message;
 
