@@ -31,21 +31,22 @@ public class Node {
   public static void main(String[] args) {
 
     // Parse command line arguments
-    if (args.length != 4) {
-      System.err
-          .println("Usage: java Node <nodeId> <nodesConfigPath> <clientsConfigPath> <blockSize>");
+    if (args.length != 4 && args.length != 5) {
+      System.err.println(
+          "Usage: java Node <nodeId> <nodesConfigPath> <clientsConfigPath> <blockSize> [-v|--verbose]");
       System.exit(1);
     }
     int id = Integer.parseInt(args[0]);
     nodesConfigPath += args[1];
     clientsConfigPath += args[2];
     int blockSize = Integer.parseInt(args[3]);
+    boolean debug = args[4].equals("-v") || args[4].equals("--verbose");
 
     // Retrieve nodes and client configurations
     ProcessConfig[] nodeConfigs = ProcessConfigBuilder.fromFile(nodesConfigPath);
     ProcessConfig[] clientConfigs = ProcessConfigBuilder.fromFile(clientsConfigPath);
 
-    Node node = new Node(id, nodeConfigs, clientConfigs, blockSize, true);
+    Node node = new Node(id, nodeConfigs, clientConfigs, blockSize, debug);
     node.start();
 
     // Wait for the user to terminate the program
