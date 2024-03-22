@@ -26,7 +26,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.application.ClientResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.application.TransferRequest;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
-import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
+import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
@@ -83,7 +83,7 @@ public class Library {
     try {
       sourcePublicKey = RSACryptography.readPublicKey(sourcePublicKeyPath);
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-      throw new HDSSException(ErrorMessage.ErrorReadingPublicKey);
+      throw new HDSException(ErrorMessage.ErrorReadingPublicKey);
     }
 
     // Sign balance request
@@ -94,7 +94,7 @@ public class Library {
       PrivateKey privateKey = RSACryptography.readPrivateKey(clientConfig.getPrivateKeyPath());
       signature = RSACryptography.sign(serializedBalanceMessage, privateKey);
     } catch (Exception e) {
-      throw new HDSSException(ErrorMessage.SigningError);
+      throw new HDSException(ErrorMessage.SigningError);
     }
 
     // Create latch and response vector for this request
@@ -136,7 +136,7 @@ public class Library {
 
     // Verify that amount is positive
     if (amount <= 0) {
-      throw new HDSSException(ErrorMessage.InvalidAmount);
+      throw new HDSException(ErrorMessage.InvalidAmount);
     }
 
     // Read source public key
@@ -144,7 +144,7 @@ public class Library {
     try {
       sourcePublicKey = RSACryptography.readPublicKey(sourcePublicKeyPath);
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-      throw new HDSSException(ErrorMessage.ErrorReadingPublicKey);
+      throw new HDSException(ErrorMessage.ErrorReadingPublicKey);
     }
 
     // Read destination public key
@@ -152,7 +152,7 @@ public class Library {
     try {
       destinationPublicKey = RSACryptography.readPublicKey(destinationPublicKeyPath);
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-      throw new HDSSException(ErrorMessage.ErrorReadingPublicKey);
+      throw new HDSException(ErrorMessage.ErrorReadingPublicKey);
     }
 
     // Create latch and response vector for this request
@@ -168,7 +168,7 @@ public class Library {
       PrivateKey privateKey = RSACryptography.readPrivateKey(clientConfig.getPrivateKeyPath());
       signature = RSACryptography.sign(serializedTransferMessage, privateKey);
     } catch (Exception e) {
-      throw new HDSSException(ErrorMessage.SigningError);
+      throw new HDSException(ErrorMessage.SigningError);
     }
 
     // Broadcast transfer request
@@ -305,7 +305,7 @@ public class Library {
               }
             }
           }
-        } catch (HDSSException e) {
+        } catch (HDSException e) {
           logger.info(
               MessageFormat.format("[{0}] - EXCEPTION: {1}", clientConfig.getId(), e.getMessage()));
         } catch (SocketException e) {

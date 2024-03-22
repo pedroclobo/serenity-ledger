@@ -1,10 +1,10 @@
 package pt.ulisboa.tecnico.hdsledger.utilities;
 
-public class HDSSException extends RuntimeException {
+public class HDSException extends RuntimeException {
 
   private final ErrorMessage errorMessage;
 
-  public HDSSException(ErrorMessage message) {
+  public HDSException(ErrorMessage message) {
     errorMessage = message;
   }
 

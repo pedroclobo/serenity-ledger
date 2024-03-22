@@ -16,7 +16,7 @@ import pt.ulisboa.tecnico.hdsledger.service.models.Block;
 import pt.ulisboa.tecnico.hdsledger.service.models.TransactionPool;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
-import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
+import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
@@ -57,7 +57,7 @@ public class ClientService implements UDPService {
         .filter(c -> c.getId() == message.getSenderId()).findFirst();
 
     if (clientConfig.isEmpty()) {
-      throw new HDSSException(ErrorMessage.NoSuchClient);
+      throw new HDSException(ErrorMessage.NoSuchClient);
     }
 
     // Verify client signature
@@ -67,7 +67,7 @@ public class ClientService implements UDPService {
         return true;
       }
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-      throw new HDSSException(ErrorMessage.SignatureVerificationError);
+      throw new HDSException(ErrorMessage.SignatureVerificationError);
     }
 
     logger.info(MessageFormat.format("Invalid client signature from {0}", message.getSenderId()));

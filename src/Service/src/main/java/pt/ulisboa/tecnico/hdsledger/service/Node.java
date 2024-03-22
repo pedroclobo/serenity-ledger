@@ -9,7 +9,7 @@ import pt.ulisboa.tecnico.hdsledger.service.services.ClientService;
 import pt.ulisboa.tecnico.hdsledger.service.services.NodeService;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
-import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
+import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
@@ -61,7 +61,7 @@ public class Node {
 
     // Retrieve the current node's config and the leader's config
     ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId() == id).findAny()
-        .orElseThrow(() -> new HDSSException(ErrorMessage.NoSuchNode));
+        .orElseThrow(() -> new HDSException(ErrorMessage.NoSuchNode));
 
     logger.info(MessageFormat.format(
         "Node with id {0} with node socket on <{1}:{2}> and client socket on <{3}:{4}> and leader={5}",

@@ -15,9 +15,9 @@ public class ProcessConfigBuilder {
       String input = new String(is.readAllBytes(), StandardCharsets.UTF_8);
       return fromJson(input);
     } catch (FileNotFoundException e) {
-      throw new HDSSException(ErrorMessage.ConfigFileNotFound);
+      throw new HDSException(ErrorMessage.ConfigFileNotFound);
     } catch (IOException | JsonSyntaxException e) {
-      throw new HDSSException(ErrorMessage.ConfigFileFormat);
+      throw new HDSException(ErrorMessage.ConfigFileFormat);
     }
   }
 
