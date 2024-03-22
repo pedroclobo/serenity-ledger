@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.hdsledger.service.services;
 import java.io.IOException;
 import java.net.SocketException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
 import java.util.List;
@@ -16,6 +17,10 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import pt.ulisboa.tecnico.hdsledger.communication.BalanceRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.BalanceResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitQuorumMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
@@ -25,6 +30,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.PrePrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
+import pt.ulisboa.tecnico.hdsledger.service.models.Account;
 import pt.ulisboa.tecnico.hdsledger.service.models.Block;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.Ledger;
@@ -32,6 +38,7 @@ import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.service.models.Pair;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
+import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
 import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
 
@@ -66,7 +73,7 @@ public class NodeService implements UDPService {
   private final Object waitingConsensusLock = new Object();
 
   // Ledger
-  private Ledger ledger = new Ledger();
+  private Ledger ledger;
 
   // Map between client id and public key
   private final Map<Integer, String> clientPublicKeys = new ConcurrentHashMap<>();
@@ -89,6 +96,8 @@ public class NodeService implements UDPService {
     this.messages = new MessageBucket(nodesConfig.length);
 
     this.timer = new Timer();
+
+    this.ledger = new Ledger(clientsConfig);
   }
 
   public ProcessConfig getConfig() {
@@ -449,9 +458,6 @@ public class NodeService implements UDPService {
       // Add the value to the ledger
       decide(consensusInstance, round, Block.fromJson(block));
 
-      // TODO: Reply to client
-      // Message messageToClient = new AppendMessage(config.getId(), Message.Type.APPEND, value);
-      // clientLink.broadcast(messageToClient);
     } else {
       logger.info(
           MessageFormat.format("[{0}]: No valid COMMIT QUORUM for (λ, r) = ({1}, {2}), ignoring",
@@ -460,16 +466,64 @@ public class NodeService implements UDPService {
   }
 
   private synchronized void decide(int consensusInstance, int round, Block block) {
-    ledger.addValue(block);
+    ledger.add(block);
 
     logger.info(MessageFormat.format("[{0}]: Current Ledger has {1} blocks", config.getId(),
         ledger.getLedger().size()));
 
     lastDecidedConsensusInstance.set(consensusInstance);
+    instanceInfo.get(consensusInstance).setDecidedBlock(block);
+
+    notifyClients(consensusInstance);
 
     // Notify waiting threads
     synchronized (waitingConsensusLock) {
       waitingConsensusLock.notifyAll();
+    }
+  }
+
+  public void notifyClients(int consensusInstance) {
+    if (consensusInstance > lastDecidedConsensusInstance.get()) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Can't notify clients for consensus instance {1} that is not decided",
+          config.getId(), consensusInstance));
+      return;
+    }
+
+    InstanceInfo instance = instanceInfo.get(consensusInstance);
+    Block block = instance.getDecidedBlock().get();
+
+    for (ClientRequest message : block.getTransactions()) {
+
+      switch (message.getType()) {
+
+        case BALANCE_REQUEST:
+          BalanceRequest balanceRequest = message.deserializeBalanceMessage();
+          PublicKey accountPublicKey = balanceRequest.getPublicKey();
+          String publicKeyHash;
+
+          try {
+            publicKeyHash = RSACryptography.digest(accountPublicKey.toString());
+          } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error digesting public key");
+          }
+
+          // Extract account and balance
+          Account account = ledger.getAccount(publicKeyHash);
+          int balance = account.getBalance();
+
+          // Send response to client
+          BalanceResponse balanceResponse = new BalanceResponse(balance);
+          ClientResponse response = new ClientResponse(config.getId(),
+              Message.Type.BALANCE_RESPONSE, balanceResponse.toJson(), "");
+
+          clientLink.send(message.getSenderId(), response);
+
+          break;
+
+        default:
+          throw new UnsupportedOperationException();
+      }
     }
   }
 

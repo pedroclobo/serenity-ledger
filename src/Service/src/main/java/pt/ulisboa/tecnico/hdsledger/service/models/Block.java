@@ -4,12 +4,12 @@ import java.util.List;
 
 import com.google.gson.Gson;
 
-import pt.ulisboa.tecnico.hdsledger.communication.ClientMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
 
 public class Block {
 
   private int consensusInstance;
-  private List<ClientMessage> transactions;
+  private List<ClientRequest> transactions;
 
   public Block() {}
 
@@ -21,15 +21,15 @@ public class Block {
     this.consensusInstance = consensusInstance;
   }
 
-  public void addTransaction(ClientMessage transaction) {
+  public void addTransaction(ClientRequest transaction) {
     transactions.add(transaction);
   }
 
-  public List<ClientMessage> getTransactions() {
+  public List<ClientRequest> getTransactions() {
     return transactions;
   }
 
-  public void setTransactions(List<ClientMessage> transactions) {
+  public void setTransactions(List<ClientRequest> transactions) {
     this.transactions = transactions;
   }
 

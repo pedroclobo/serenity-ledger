@@ -4,12 +4,12 @@ import java.security.PublicKey;
 
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
-public class BalanceMessage {
+public class BalanceRequest {
 
   // Serialized source public key
   private String sourcePublicKey;
 
-  public BalanceMessage(PublicKey sourcePublicKey) {
+  public BalanceRequest(PublicKey sourcePublicKey) {
     this.sourcePublicKey = RSACryptography.serializePublicKey(sourcePublicKey);
   }
 

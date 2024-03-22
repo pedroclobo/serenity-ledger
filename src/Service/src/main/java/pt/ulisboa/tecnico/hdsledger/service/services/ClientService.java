@@ -9,7 +9,7 @@ import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Optional;
 
-import pt.ulisboa.tecnico.hdsledger.communication.ClientMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ClientRequest;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.service.models.Block;
@@ -50,7 +50,7 @@ public class ClientService implements UDPService {
     return this.config;
   }
 
-  private boolean verifyClientSignature(ClientMessage message) {
+  private boolean verifyClientSignature(ClientRequest message) {
 
     // Find configuration of the sender
     Optional<ProcessConfig> clientConfig = Arrays.stream(this.clientConfigs)
@@ -63,7 +63,7 @@ public class ClientService implements UDPService {
     // Verify client signature
     try {
       PublicKey publicKey = RSACryptography.readPublicKey(clientConfig.get().getPublicKeyPath());
-      if (RSACryptography.verify(message.getMessage(), publicKey, message.getClientSignature())) {
+      if (RSACryptography.verify(message.getMessage(), publicKey, message.getSignature())) {
         return true;
       }
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
@@ -75,7 +75,7 @@ public class ClientService implements UDPService {
     return false;
   }
 
-  public void balance(ClientMessage message) {
+  public void balance(ClientRequest message) {
     logger.info(MessageFormat.format("[{0}]: Received balance request from {1}",
         this.config.getId(), message.getSenderId()));
 
@@ -91,7 +91,7 @@ public class ClientService implements UDPService {
     startConsensus();
   }
 
-  public void transfer(ClientMessage message) {
+  public void transfer(ClientRequest message) {
     logger.info(MessageFormat.format("[{0}]: Received Transfer from {1}", this.config.getId(),
         message.getSenderId()));
 
@@ -137,9 +137,9 @@ public class ClientService implements UDPService {
             new Thread(() -> {
               switch (message.getType()) {
 
-                case BALANCE -> balance((ClientMessage) message);
+                case BALANCE_REQUEST -> balance((ClientRequest) message);
 
-                case TRANSFER -> transfer((ClientMessage) message);
+                case TRANSFER_REQUEST -> transfer((ClientRequest) message);
 
                 case ACK -> {
                 }

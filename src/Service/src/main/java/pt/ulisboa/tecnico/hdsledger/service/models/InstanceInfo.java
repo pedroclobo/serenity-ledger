@@ -22,6 +22,8 @@ public class InstanceInfo {
   private Optional<Integer> committedRound;
   private Optional<Set<CommitMessage>> commitQuorum;
 
+  private Optional<Block> decidedBlock;
+
   private Map<Integer, Boolean> triggeredPrePrepareRule;
   private Map<Integer, Boolean> triggeredPrepareQuorumRule;
   private Map<Integer, Boolean> triggeredCommitQuorumRule;
@@ -40,6 +42,8 @@ public class InstanceInfo {
     this.commitMessage = Optional.empty();
     this.committedRound = Optional.empty();
     this.commitQuorum = Optional.empty();
+
+    this.decidedBlock = Optional.empty();
 
     this.triggeredPrePrepareRule = new ConcurrentHashMap<>();
     this.triggeredPrepareQuorumRule = new ConcurrentHashMap<>();
@@ -110,6 +114,14 @@ public class InstanceInfo {
 
   public void setCommitQuorum(Set<CommitMessage> commitQuorum) {
     this.commitQuorum = Optional.of(commitQuorum);
+  }
+
+  public Optional<Block> getDecidedBlock() {
+    return decidedBlock;
+  }
+
+  public void setDecidedBlock(Block decidedBlock) {
+    this.decidedBlock = Optional.of(decidedBlock);
   }
 
   public boolean triggeredPrePrepareRule(int round) {
