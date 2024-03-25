@@ -71,7 +71,13 @@ public class Library {
   }
 
   public BalanceResponse balance(int sourceId) {
-    return balance(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath());
+    // Client id
+    if (sourceId > nodeConfigs.length) {
+      return balance(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath());
+    }
+
+    // Node id
+    return balance(nodeConfigs[sourceId - 1].getPublicKeyPath());
   }
 
   public BalanceResponse balance(String sourcePublicKeyPath) {
