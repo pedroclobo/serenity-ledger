@@ -99,7 +99,7 @@ public class NodeService implements UDPService {
 
     this.timer = new Timer();
 
-    this.ledger = new Ledger(clientsConfig);
+    this.ledger = new Ledger(nodesConfig, clientsConfig);
   }
 
   public ProcessConfig getConfig() {

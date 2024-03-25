@@ -17,11 +17,28 @@ public class Ledger {
   // Map from public key hash to account
   private Map<String, Account> accounts;
 
-  public Ledger(ProcessConfig[] configs) {
+  public Ledger(ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs) {
     ledger = new ArrayList<>();
 
     accounts = new HashMap<>();
-    for (ProcessConfig config : configs) {
+
+    // Create node accounts
+    for (ProcessConfig config : nodeConfigs) {
+      String publicKeyPath = config.getPublicKeyPath();
+      PublicKey publicKey;
+      String publicKeyHash;
+      try {
+        publicKey = RSACryptography.readPublicKey(publicKeyPath);
+        publicKeyHash = RSACryptography.digest(publicKey.toString());
+      } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+        throw new RuntimeException("Error reading public key");
+      }
+
+      accounts.put(publicKeyHash, new Account(config.getId(), config.getPublicKeyPath()));
+    }
+
+    // Create client accounts
+    for (ProcessConfig config : clientConfigs) {
       String publicKeyPath = config.getPublicKeyPath();
       PublicKey publicKey;
       String publicKeyHash;
