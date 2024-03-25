@@ -3,18 +3,15 @@ package pt.ulisboa.tecnico.hdsledger.communication.application;
 import com.google.gson.Gson;
 
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
-import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 
 public class ClientResponse extends Message {
 
   // Serialized message
   private String message;
-  private String signature;
 
-  public ClientResponse(int senderId, Type type, String message, String signature) {
+  public ClientResponse(int senderId, Type type, String message) {
     super(senderId, type);
     this.message = message;
-    this.signature = signature;
   }
 
   public TransferResponse deserializeTransferRequest() {
@@ -31,14 +28,6 @@ public class ClientResponse extends Message {
 
   public void setMessage(String message) {
     this.message = message;
-  }
-
-  public String getSignature() {
-    return signature;
-  }
-
-  public void setSignature(String signature) {
-    this.signature = signature;
   }
 
 }

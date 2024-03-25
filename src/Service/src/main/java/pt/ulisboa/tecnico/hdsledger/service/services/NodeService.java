@@ -517,7 +517,7 @@ public class NodeService implements UDPService {
           // Send response to client
           BalanceResponse balanceResponse = new BalanceResponse(balanceRequest.getNonce(), balance);
           ClientResponse response = new ClientResponse(config.getId(),
-              Message.Type.BALANCE_RESPONSE, balanceResponse.toJson(), "");
+              Message.Type.BALANCE_RESPONSE, balanceResponse.toJson());
 
           clientLink.send(message.getSenderId(), response);
 
@@ -550,7 +550,7 @@ public class NodeService implements UDPService {
           TransferResponse transferResponse = new TransferResponse(transferRequest.getNonce(),
               sourcePublicKey, destinationPublicKey, amount);
           response = new ClientResponse(config.getId(), Message.Type.TRANSFER_RESPONSE,
-              transferResponse.toJson(), "");
+              transferResponse.toJson());
 
           clientLink.send(message.getSenderId(), response);
 
