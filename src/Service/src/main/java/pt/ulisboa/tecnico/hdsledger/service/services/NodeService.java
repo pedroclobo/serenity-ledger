@@ -620,6 +620,8 @@ public class NodeService implements UDPService {
   }
 
   private synchronized void decide(int consensusInstance, int round, Block block) {
+    block.setConsensusInstance(consensusInstance);
+
     ledger.add(block);
 
     logger.info(MessageFormat.format("[{0}]: Current Ledger has {1} blocks", config.getId(),
