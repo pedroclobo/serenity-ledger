@@ -84,6 +84,17 @@ public class Link {
         .forEach((destId, dest) -> send(destId, gson.fromJson(gson.toJson(data), data.getClass())));
   }
 
+  public void quorumMulticast(Message data) {
+    int f = (nodes.size() - 1) / 3;
+    Collection<Integer> destIds =
+        nodes.keySet().stream().limit(2 * f + 1).collect(Collectors.toList());
+
+    Gson gson = new Gson();
+    for (int destId : destIds) {
+      send(destId, gson.fromJson(gson.toJson(data), data.getClass()));
+    }
+  }
+
   public void smallMulticast(Message data) {
     int f = (nodes.size() - 1) / 3;
     Collection<Integer> destIds = nodes.keySet().stream().limit(f + 1).collect(Collectors.toList());

@@ -112,12 +112,12 @@ public class Library {
     this.responses.put(nonce, new ArrayList<>());
     this.latches.put(nonce, new CountDownLatch(1));
 
-    // Broadcast balance request
-    logger.info(MessageFormat.format("[{0}] - Broadcasting balance request for {1} with nonce {2}",
+    // Multicast balance request
+    logger.info(MessageFormat.format("[{0}] - Multicasting balance request for {1} with nonce {2}",
         clientConfig.getId(), sourcePublicKeyPath, nonce));
     ClientRequest message = new ClientRequest(clientConfig.getId(), Type.BALANCE_REQUEST,
         serializedBalanceMessage, signature);
-    link.broadcast(message);
+    link.quorumMulticast(message);
 
     // Wait for f + 1 responses
     try {
@@ -197,13 +197,13 @@ public class Library {
       throw new HDSException(ErrorMessage.SigningError);
     }
 
-    // Broadcast transfer request
+    // Multicast transfer request
     logger.info(MessageFormat.format(
-        "[{0}] - Broadcasting transfer request from {1} to {2} with amount {3} and nonce {4}",
+        "[{0}] - Multicasting transfer request from {1} to {2} with amount {3} and nonce {4}",
         clientConfig.getId(), sourcePublicKeyPath, destinationPublicKeyPath, amount, nonce));
     ClientRequest message = new ClientRequest(clientConfig.getId(), Type.TRANSFER_REQUEST,
         serializedTransferMessage, signature);
-    link.broadcast(message);
+    link.quorumMulticast(message);
 
     // Wait for f + 1 responses
     try {
