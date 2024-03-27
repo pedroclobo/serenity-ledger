@@ -10,22 +10,24 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceRequest;
 import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.application.TransferResponse;
 import pt.ulisboa.tecnico.hdsledger.library.Library;
-import pt.ulisboa.tecnico.hdsledger.service.models.Block;
+import pt.ulisboa.tecnico.hdsledger.service.models.Ledger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
+import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public abstract class ByzantineBehaviorTest {
 
-  private static String keysPath = "../PKI/src/main/resources/keys/";
   private static int BLOCK_SIZE = 1;
 
   private String nodesConfigPath = "src/main/resources/";
   private String clientsConfigPath = "../Client/src/main/resources/";
 
-  protected ArrayList<Node> nodes;
-  protected Library library;
+  protected List<Node> nodes;
+  protected List<Library> libraries;
 
   protected int f;
   protected int quorumSize;
@@ -46,6 +48,7 @@ public abstract class ByzantineBehaviorTest {
   @BeforeEach
   public final void setUp() {
     nodes = new ArrayList<>();
+    libraries = new ArrayList<>();
 
     ProcessConfig[] nodesConfig = parseConfigs(nodesConfigPath);
     ProcessConfig[] clientsConfig = parseConfigs(clientsConfigPath);
@@ -63,8 +66,10 @@ public abstract class ByzantineBehaviorTest {
       nodeConfig.setPort(nodeConfig.getClientPort());
     }
 
-    int clientId = newClientsConfig[0].getId();
-    library = new Library(clientId, newNodesConfig, newClientsConfig, false);
+    for (ProcessConfig clientConfig : newClientsConfig) {
+      int clientId = clientConfig.getId();
+      libraries.add(new Library(clientId, newNodesConfig, newClientsConfig, false));
+    }
   }
 
   @AfterEach
@@ -72,29 +77,45 @@ public abstract class ByzantineBehaviorTest {
     for (Node node : nodes) {
       node.shutdown();
     }
-    library.shutdown();
+    for (Library library : libraries) {
+      library.shutdown();
+    }
   }
 
   @Test
-  void checkBalance() {
+  void transfersAndBalances() {
     for (Node node : nodes) {
-      assertEquals(0, node.getNodeService().getLedger().size());
+      assertEquals(0, node.getNodeService().getLedger().getLedger().size());
     }
 
-    BalanceResponse response = library.balance(keysPath + "client5.pub");
-    assertEquals(1000, response.getAmount(), "Initial balance should be 1000");
+    BalanceResponse balanceResponse = libraries.get(0).balance(5);
+    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
+    assertEquals(1000, balanceResponse.getAmount().get(), "Initial balance should be 1000");
+
+    balanceResponse = libraries.get(0).balance(6);
+    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
+    assertEquals(1000, balanceResponse.getAmount().get(), "Initial balance should be 1000");
+
+    TransferResponse transferResponse = libraries.get(0).transfer(5, 6, 100);
+    assertTrue(transferResponse.isSuccessful(), "Transfer request should be successful");
+
+    balanceResponse = libraries.get(0).balance(5);
+    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
+    assertEquals(900, balanceResponse.getAmount().get(), "New balance should be 900");
+
+    balanceResponse = libraries.get(0).balance(6);
+    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
+    assertEquals(1100, balanceResponse.getAmount().get(), "New balance should be 1100");
 
     List<Integer> sizes = new ArrayList<>();
-    List<List<Block>> ledgers = new ArrayList<>();
+    List<Ledger> ledgers = new ArrayList<>();
     for (Node node : nodes) {
-      sizes.add(node.getNodeService().getLedger().size());
-      ledgers.add(node.getNodeService().getLedger());
+      Ledger ledger = node.getNodeService().getLedger();
+      sizes.add(ledger.getLedger().size());
+      ledgers.add(ledger);
     }
 
-    long sizeCount = sizes.stream().filter(size -> size == 1).count();
-    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + 1);
-
-    // TODO: compare ledgers
+    long sizeCount = sizes.stream().filter(size -> size == 5).count();
+    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + 5);
   }
-
 }
