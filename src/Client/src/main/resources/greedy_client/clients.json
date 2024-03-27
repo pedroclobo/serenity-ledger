@@ -1,0 +1,18 @@
+[
+    {
+        "id": 5,
+        "hostname": "localhost",
+        "port": 3005,
+        "publicKeyPath": "../PKI/src/main/resources/keys/client5.pub",
+        "privateKeyPath": "../PKI/src/main/resources/keys/client5.priv",
+        "byzantineBehavior": "GreedyClient"
+    },
+    {
+        "id": 6,
+        "hostname": "localhost",
+        "port": 3006,
+        "publicKeyPath": "../PKI/src/main/resources/keys/client6.pub",
+        "privateKeyPath": "../PKI/src/main/resources/keys/client6.priv",
+        "byzantineBehavior": "GreedyClient"
+    }
+]
