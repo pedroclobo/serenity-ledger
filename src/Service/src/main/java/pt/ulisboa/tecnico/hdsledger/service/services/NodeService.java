@@ -37,6 +37,7 @@ import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.Ledger;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.service.models.Pair;
+import pt.ulisboa.tecnico.hdsledger.service.models.TransactionPool;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
@@ -81,11 +82,13 @@ public class NodeService implements UDPService {
   // Ledger
   private Ledger ledger;
 
+  private TransactionPool pool;
+
   // Map between client id and public key
   private final Map<Integer, String> clientPublicKeys = new ConcurrentHashMap<>();
 
   public NodeService(Link link, Link clientLink, ProcessConfig config, ProcessConfig[] nodesConfig,
-      ProcessConfig[] clientsConfig, boolean debug) {
+      ProcessConfig[] clientsConfig, TransactionPool pool, boolean debug) {
 
     this.logger = new HDSLogger(NodeService.class.getName(), debug);
 
@@ -108,6 +111,8 @@ public class NodeService implements UDPService {
     for (ProcessConfig clientConfig : clientsConfig) {
       clientNonces.put(clientConfig.getId(), ConcurrentHashMap.newKeySet());
     }
+
+    this.pool = pool;
   }
 
   public ProcessConfig getConfig() {
@@ -437,6 +442,9 @@ public class NodeService implements UDPService {
 
       // Apply block to the ledger
       applyBlockAndReplyToClients(consensusInstance);
+
+      // Remove transactions from transaction pool
+      pool.removeTransactions(Block.fromJson(block).getTransactions());
 
     } else {
       logger.info(
@@ -925,6 +933,9 @@ public class NodeService implements UDPService {
     decide(consensusInstance, round, Block.fromJson(block));
 
     applyBlockAndReplyToClients(consensusInstance);
+
+    // Remove transactions from transaction pool
+    pool.removeTransactions(Block.fromJson(block).getTransactions());
   }
 
   @Override
