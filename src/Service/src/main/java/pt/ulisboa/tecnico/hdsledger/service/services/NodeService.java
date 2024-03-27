@@ -555,6 +555,11 @@ public class NodeService implements UDPService {
             throw new HDSException(ErrorMessage.SignatureVerificationError);
           }
 
+          // Check if amount is positive
+          if (transferRequest.getAmount() <= 0) {
+            valid = false;
+          }
+
           // Check if source and destination accounts exist
           String sourcePublicKeyHash;
           String destinationPublicKeyHash;
