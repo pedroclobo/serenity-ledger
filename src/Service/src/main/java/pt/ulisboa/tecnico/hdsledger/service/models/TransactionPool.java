@@ -30,11 +30,18 @@ public class TransactionPool {
       if (pool.size() >= blockSize) {
         Block block = new Block();
         block.setTransactions(pool);
-        pool = new ArrayList<>();
         return Optional.of(block);
       }
 
       return Optional.empty();
+    }
+  }
+
+  public void removeTransactions(List<ClientRequest> transactions) {
+    synchronized (pool) {
+      for (ClientRequest transaction : transactions) {
+        pool.remove(transaction);
+      }
     }
   }
 
