@@ -8,9 +8,6 @@ import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -253,13 +250,6 @@ public class NodeService implements UDPService {
       setupConsensus(consensusInstance, Block.fromJson(block));
     }
 
-    // Check if transactions are signed by the clients
-    if (!verifyBlockSignatures(Block.fromJson(block))) {
-      logger.info(MessageFormat.format("[{0}]: Invalid signature for block on PRE-PREPARE",
-          config.getId()));
-      return;
-    }
-
     // Discard messages from others (λ, r)
     if (consensusInstance != currentConsensusInstance.get()
         || round != instanceInfo.get(consensusInstance).getCurrentRound()) {
@@ -335,13 +325,6 @@ public class NodeService implements UDPService {
     }
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
-    // Check if transactions are signed by the clients
-    if (!verifyBlockSignatures(Block.fromJson(block))) {
-      logger.info(
-          MessageFormat.format("[{0}]: Invalid signature for block on PREPARE", config.getId()));
-      return;
-    }
-
     // Discard messages from others (λ, r)
     if (consensusInstance != currentConsensusInstance.get()
         || round != instanceInfo.get(consensusInstance).getCurrentRound()) {
@@ -413,13 +396,6 @@ public class NodeService implements UDPService {
     String block = commitMessage.getBlock();
 
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
-
-    // Check if transactions are signed by the clients
-    if (!verifyBlockSignatures(Block.fromJson(block))) {
-      logger.info(
-          MessageFormat.format("[{0}]: Invalid signature for block on COMMIT", config.getId()));
-      return;
-    }
 
     // Don't trigger the commit rule more than once per round
     if (instance.triggeredCommitQuorumRule(round)) {
@@ -696,17 +672,6 @@ public class NodeService implements UDPService {
       return false;
     }
 
-    // Check if transactions are signed by the clients
-    for (ConsensusMessage m : preparedQuorum) {
-      PrepareMessage pm = m.deserializePrepareMessage();
-
-      if (!verifyBlockSignatures(Block.fromJson(pm.getBlock()))) {
-        logger.info(MessageFormat.format("[{0}]: Invalid signature for block on prepared quorum",
-            config.getId()));
-        return false;
-      }
-    }
-
     // Check that all messages have the same instance
     if (preparedQuorum.stream().map(ConsensusMessage::getConsensusInstance).distinct()
         .count() != 1) {
@@ -920,15 +885,6 @@ public class NodeService implements UDPService {
       return false;
     }
 
-    for (CommitMessage commitMessage : quorum) {
-      if (!verifyBlockSignatures(Block.fromJson(commitMessage.getBlock()))) {
-        logger.info(MessageFormat.format("[{0}]: Invalid signature for block on commit quorum",
-            config.getId()));
-        return false;
-
-      }
-    }
-
     return true;
   }
 
@@ -956,112 +912,6 @@ public class NodeService implements UDPService {
     decide(consensusInstance, round, Block.fromJson(block));
 
     applyBlockAndReplyToClients(consensusInstance);
-  }
-
-  private boolean verifyBlockSignatures(Block block) {
-    for (ClientRequest request : block.getTransactions()) {
-      int clientId = request.getSenderId();
-      String publicKeyPath = clientPublicKeys.get(clientId);
-
-      int nonce;
-      if (request.getType() == Message.Type.BALANCE_REQUEST) {
-        nonce = request.deserializeBalanceMessage().getNonce();
-      } else if (request.getType() == Message.Type.TRANSFER_REQUEST) {
-        nonce = request.deserializeTransferMessage().getNonce();
-      } else {
-        throw new UnsupportedOperationException();
-      }
-
-      // Check if the nonce is valid
-      if (clientNonces.get(clientId).contains(nonce)) {
-        return false;
-      }
-
-      try {
-        if (!request.verifySignature(publicKeyPath)) {
-          return false;
-        }
-      } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
-          | InvalidKeySpecException e) {
-        throw new HDSException(ErrorMessage.SignatureVerificationError);
-      }
-
-    }
-
-    return true;
-  }
-
-  private boolean validateBlock(Block block) {
-    if (!verifyBlockSignatures(block)) {
-      return false;
-    }
-
-    for (ClientRequest transaction : block.getTransactions()) {
-      switch (transaction.getType()) {
-
-        // Source account must exist
-        case BALANCE_REQUEST:
-          BalanceRequest balanceRequest = transaction.deserializeBalanceMessage();
-          String publicKeyHash;
-
-          try {
-            publicKeyHash = RSACryptography.digest(balanceRequest.getPublicKey().toString());
-          } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error digesting public key");
-          }
-
-          if (!ledger.hasAccount(publicKeyHash)) {
-            return false;
-          }
-
-          break;
-
-        case TRANSFER_REQUEST:
-          int senderId = transaction.getSenderId();
-          TransferRequest transferRequest = transaction.deserializeTransferMessage();
-          String sourcePublicKeyHash;
-          String destinationPublicKeyHash;
-
-          // Amount must be positive
-          if (transferRequest.getAmount() <= 0) {
-            return false;
-          }
-
-          try {
-            sourcePublicKeyHash =
-                RSACryptography.digest(transferRequest.getSourcePublicKey().toString());
-            destinationPublicKeyHash =
-                RSACryptography.digest(transferRequest.getDestinationPublicKey().toString());
-          } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error digesting public key");
-          }
-
-          // Source and destination accounts must exist
-          if (!ledger.hasAccount(sourcePublicKeyHash)
-              || !ledger.hasAccount(destinationPublicKeyHash)) {
-            return false;
-          }
-
-          Account sourceAccount = ledger.getAccount(sourcePublicKeyHash);
-
-          // The source account must be owned by the sender
-          if (sourceAccount.getOwnerId() != senderId) {
-            return false;
-          }
-
-          // Source account must have enough balance
-          if (sourceAccount.getBalance() < transferRequest.getAmount()) {
-            return false;
-          }
-
-          break;
-
-        default:
-          throw new UnsupportedOperationException();
-      }
-    }
-
-    return true;
   }
 
   @Override
