@@ -20,7 +20,7 @@ public class InstanceInfo {
 
   private Optional<CommitMessage> commitMessage;
   private Optional<Integer> committedRound;
-  private Optional<Set<CommitMessage>> commitQuorum;
+  private Optional<Set<ConsensusMessage>> commitQuorum;
 
   private Optional<Block> decidedBlock;
 
@@ -108,11 +108,11 @@ public class InstanceInfo {
     this.committedRound = Optional.of(committedRound);
   }
 
-  public Optional<Set<CommitMessage>> getCommitQuorum() {
+  public Optional<Set<ConsensusMessage>> getCommitQuorum() {
     return commitQuorum;
   }
 
-  public void setCommitQuorum(Set<CommitMessage> commitQuorum) {
+  public void setCommitQuorum(Set<ConsensusMessage> commitQuorum) {
     this.commitQuorum = Optional.of(commitQuorum);
   }
 

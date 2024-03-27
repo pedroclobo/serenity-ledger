@@ -175,7 +175,7 @@ public class MessageBucket {
     return frequency.entrySet().stream().anyMatch((entry) -> entry.getValue() >= quorumSize);
   }
 
-  public Optional<Set<CommitMessage>> getCommitQuorum(int instance) {
+  public Optional<Set<ConsensusMessage>> getCommitQuorum(int instance) {
     // Get all commit messages for instance
     List<ConsensusMessage> messages = commitBucket.get(instance).values().stream()
         .flatMap(roundMessages -> roundMessages.values().stream()).collect(Collectors.toList());
@@ -194,8 +194,8 @@ public class MessageBucket {
         .filter((entry) -> entry.getValue() >= quorumSize).map(Map.Entry::getKey).findFirst();
 
     return roundValue.map((pair) -> commitBucket.get(instance).get(pair.getFirst()).values()
-        .stream().map((message) -> message.deserializeCommitMessage())
-        .filter((message) -> message.getBlock().equals(pair.getSecond()))
+        .stream().map(m -> new Pair<>(m, m.deserializeCommitMessage()))
+        .filter(p -> p.getSecond().getBlock().equals(pair.getSecond())).map(p -> p.getFirst())
         .collect(Collectors.toSet()));
   }
 

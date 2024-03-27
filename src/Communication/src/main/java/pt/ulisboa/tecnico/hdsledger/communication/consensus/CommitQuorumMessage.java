@@ -9,21 +9,15 @@ import pt.ulisboa.tecnico.hdsledger.utilities.OptionalTypeAdapter;
 
 public class CommitQuorumMessage {
 
-  private Set<CommitMessage> quorum;
+  private Set<ConsensusMessage> quorum;
 
-  public CommitQuorumMessage(Set<CommitMessage> quorum) {
+  public CommitQuorumMessage(Set<ConsensusMessage> quorum) {
     this.quorum = quorum;
   }
 
-  public Set<CommitMessage> getQuorum() {
+  public Set<ConsensusMessage> getQuorum() {
     return quorum;
   }
-
-  // public boolean verifyValueSignature(String publicKeyPath, String value)
-  // throws InvalidKeySpecException, NoSuchAlgorithmException {
-  // return RSACryptography.verify(publicKeyPath, value,
-  // this.quorum.iterator().next().getValueSignature());
-  // }
 
   public String toJson() {
     GsonBuilder gsonBuilder = new GsonBuilder();
