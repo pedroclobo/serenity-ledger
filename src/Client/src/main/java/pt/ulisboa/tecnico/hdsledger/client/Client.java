@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.client;
 
 import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
+import pt.ulisboa.tecnico.hdsledger.communication.application.TransferResponse;
 import pt.ulisboa.tecnico.hdsledger.library.Library;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
@@ -71,7 +72,11 @@ public class Client {
             } else {
               response = library.balance(Integer.parseInt(tokens[1]));
             }
-            System.out.printf("Balance: %d%n", response.getAmount());
+            if (!response.isSuccessful()) {
+              System.err.println("Operation failed");
+            } else {
+              System.out.printf("Balance: %d%n", response.getAmount().get());
+            }
           } else {
             System.err.println("Usage: balance <source>");
           }
@@ -81,15 +86,20 @@ public class Client {
           if (tokens.length == 4) {
             System.out.printf("Transferring %s from %s to %s...%n", tokens[3], tokens[1],
                 tokens[2]);
+            TransferResponse response;
             if (!isInteger(tokens[1]) || !isInteger(tokens[2])) {
-              library.transfer(keysPath + tokens[1], keysPath + tokens[2],
+              response = library.transfer(keysPath + tokens[1], keysPath + tokens[2],
                   Integer.parseInt(tokens[3]));
             } else {
-              library.transfer(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]),
+              response = library.transfer(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]),
                   Integer.parseInt(tokens[3]));
             }
-            System.out.printf("Transfer of %s from %s to %s was successful!%n", tokens[3],
-                tokens[1], tokens[2]);
+            if (!response.isSuccessful()) {
+              System.err.println("Operation failed");
+            } else {
+              System.out.printf("Transfer of %s from %s to %s was successful!%n", tokens[3],
+                  tokens[1], tokens[2]);
+            }
           } else {
             System.err.println("Usage: transfer <source> <destination> <amount>");
           }

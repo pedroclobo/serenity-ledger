@@ -57,6 +57,10 @@ public class Ledger {
     return ledger;
   }
 
+  public boolean hasAccount(String publicKeyHash) {
+    return accounts.containsKey(publicKeyHash);
+  }
+
   public Account getAccount(String publicKeyHash) {
     return accounts.get(publicKeyHash);
   }
