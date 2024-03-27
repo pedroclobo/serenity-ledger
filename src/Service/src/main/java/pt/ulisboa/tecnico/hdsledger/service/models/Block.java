@@ -11,7 +11,9 @@ public class Block {
   private int consensusInstance;
   private List<ClientRequest> transactions;
 
-  public Block() {}
+  public Block() {
+    transactions = List.of();
+  }
 
   public int getConsensusInstance() {
     return consensusInstance;
