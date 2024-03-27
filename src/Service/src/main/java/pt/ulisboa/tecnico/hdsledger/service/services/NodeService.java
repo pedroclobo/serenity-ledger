@@ -294,10 +294,9 @@ public class NodeService implements UDPService {
     PrepareMessage prepareMessage = new PrepareMessage(prePrepareMessage.getBlock());
 
     // Testing: Send fake value
-    // if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
-    // prepareMessage =
-    // new PrepareMessage("wrong value", clientId, prePrepareMessage.getValueSignature());
-    // }
+    if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
+      prepareMessage = new PrepareMessage(new Block().toJson());
+    }
 
     ConsensusMessage consensusMessage =
         new ConsensusMessageBuilder(config.getId(), Message.Type.PREPARE)
@@ -372,13 +371,12 @@ public class NodeService implements UDPService {
       ConsensusMessage m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
           .setConsensusInstance(consensusInstance).setRound(round).setMessage(c.toJson()).build();
 
-      // // Testing: Send fake value
-      // if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
-      // m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
-      // .setConsensusInstance(consensusInstance).setRound(round)
-      // .setMessage(new CommitMessage("wrong value", clientId, valueSignature).toJson())
-      // .build();
-      // }
+      // Testing: Send fake value
+      if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
+        m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
+            .setConsensusInstance(consensusInstance).setRound(round)
+            .setMessage(new CommitMessage(new Block().toJson()).toJson()).build();
+      }
 
       logger.info(MessageFormat.format("[{0}]: Broadcasting COMMIT message for (λ, r) = ({1}, {2})",
           config.getId(), consensusInstance, round, block));
