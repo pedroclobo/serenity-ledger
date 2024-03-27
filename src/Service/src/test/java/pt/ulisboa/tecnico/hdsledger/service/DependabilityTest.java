@@ -17,8 +17,8 @@ class DependabilityTest {
 
   private static int BLOCK_SIZE = 1;
 
-  private String nodesConfigPath = "src/main/resources/none/none.json";
-  private String clientsConfigPath = "../Client/src/main/resources/client_config.json";
+  private String nodesConfigPath = "src/main/resources/none/nodes.json";
+  private String clientsConfigPath = "../Client/src/main/resources/none/clients.json";
 
   protected List<Node> nodes;
   protected List<Library> libraries;
