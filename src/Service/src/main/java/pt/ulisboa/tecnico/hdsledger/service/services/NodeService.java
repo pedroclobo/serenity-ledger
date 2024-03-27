@@ -329,8 +329,10 @@ public class NodeService implements UDPService {
     int round = message.getRound();
     String block = prepareMessage.getBlock();
 
-    // Set instance values
-    this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(Block.fromJson(block)));
+    // Set instance value if missing
+    if (!setupConsensus.contains(consensusInstance)) {
+      setupConsensus(consensusInstance, Block.fromJson(block));
+    }
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
     // Check if transactions are signed by the clients
@@ -742,6 +744,11 @@ public class NodeService implements UDPService {
     int senderId = message.getSenderId();
     Optional<Set<ConsensusMessage>> preparedQuorum = roundChangeMessage.getPreparedQuorum();
 
+    // Set instance value if missing
+    if (!setupConsensus.contains(consensusInstance)) {
+      setupConsensus(consensusInstance, new Block());
+    }
+
     // Received ROUND_CHANGE for an old λ
     // Send commit quorum to sender process
     if (consensusInstance <= lastDecidedConsensusInstance.get()) {
@@ -857,7 +864,8 @@ public class NodeService implements UDPService {
       instance.setTriggeredRoundChangeSetRule(round);
 
       // Safe to get() as hasValidRoundChangeSet returned true
-      int minRound = messages.getMinRoundOfRoundChangeSet(consensusInstance, round).get();
+      int minRound =
+          messages.getMinRoundOfRoundChangeSet(consensusInstance, instance.getCurrentRound()).get();
 
       logger.info(MessageFormat.format("[{0}]: Received valid ROUND_CHANGE set", config.getId()));
 
