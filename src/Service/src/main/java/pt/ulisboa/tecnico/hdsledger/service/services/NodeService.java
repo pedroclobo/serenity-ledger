@@ -117,8 +117,8 @@ public class NodeService implements UDPService {
     return this.config;
   }
 
-  public List<Block> getLedger() {
-    return ledger.getLedger();
+  public Ledger getLedger() {
+    return ledger;
   }
 
   private boolean isLeader(int id) {
