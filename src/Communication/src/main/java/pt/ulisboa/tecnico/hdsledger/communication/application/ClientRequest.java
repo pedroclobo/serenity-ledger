@@ -1,9 +1,15 @@
 package pt.ulisboa.tecnico.hdsledger.communication.application;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+
 import com.google.gson.Gson;
 
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
-import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
+import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class ClientRequest extends Message {
 
@@ -39,6 +45,12 @@ public class ClientRequest extends Message {
 
   public void setSignature(String signature) {
     this.signature = signature;
+  }
+
+  public boolean verifySignature(String publicKeyPath) throws InvalidKeyException,
+      NoSuchAlgorithmException, SignatureException, InvalidKeySpecException {
+    PublicKey publicKey = RSACryptography.readPublicKey(publicKeyPath);
+    return RSACryptography.verify(this.message, publicKey, this.signature);
   }
 
 }

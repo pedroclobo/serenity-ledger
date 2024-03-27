@@ -2,8 +2,10 @@ package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
 import java.net.SocketException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
 import java.util.List;
@@ -38,6 +40,8 @@ import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.Ledger;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.service.models.Pair;
+import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
+import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
@@ -74,6 +78,9 @@ public class NodeService implements UDPService {
   // Synchronize threads when waiting for a new consensus instance
   private final Object waitingConsensusLock = new Object();
 
+  // Track nonce for each client
+  private final Map<Integer, Set<Integer>> clientNonces = new ConcurrentHashMap<>();
+
   // Ledger
   private Ledger ledger;
 
@@ -100,6 +107,10 @@ public class NodeService implements UDPService {
     this.timer = new Timer();
 
     this.ledger = new Ledger(nodesConfig, clientsConfig);
+
+    for (ProcessConfig clientConfig : clientsConfig) {
+      clientNonces.put(clientConfig.getId(), ConcurrentHashMap.newKeySet());
+    }
   }
 
   public ProcessConfig getConfig() {
@@ -242,17 +253,12 @@ public class NodeService implements UDPService {
       setupConsensus(consensusInstance, Block.fromJson(block));
     }
 
-    // Check if value is signed by the client
-    // try {
-    // if (!prePrepareMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
-    // logger
-    // .info(MessageFormat.format("[{0}]: Invalid signature for value `{1}` and client id {2}",
-    // config.getId(), value, clientId));
-    // return;
-    // }
-    // } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-    // throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    // }
+    // Check if transactions are signed by the clients
+    if (!verifyBlockSignatures(Block.fromJson(block))) {
+      logger.info(MessageFormat.format("[{0}]: Invalid signature for block on PRE-PREPARE",
+          config.getId()));
+      return;
+    }
 
     // Discard messages from others (λ, r)
     if (consensusInstance != currentConsensusInstance.get()
@@ -327,17 +333,12 @@ public class NodeService implements UDPService {
     this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(Block.fromJson(block)));
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
-    // Check if the value was signed by the client
-    // try {
-    // if (!prepareMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
-    // logger
-    // .info(MessageFormat.format("[{0}]: Invalid signature for value `{1}` and client id {2}",
-    // config.getId(), value, clientId));
-    // return;
-    // }
-    // } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-    // throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    // }
+    // Check if transactions are signed by the clients
+    if (!verifyBlockSignatures(Block.fromJson(block))) {
+      logger.info(
+          MessageFormat.format("[{0}]: Invalid signature for block on PREPARE", config.getId()));
+      return;
+    }
 
     // Discard messages from others (λ, r)
     if (consensusInstance != currentConsensusInstance.get()
@@ -411,17 +412,12 @@ public class NodeService implements UDPService {
 
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
-    // Check if the value was signed by the client
-    // try {
-    // if (!commitMessage.verifyValueSignature(this.clientPublicKeys.get(clientId), value)) {
-    // logger
-    // .info(MessageFormat.format("[{0}]: Invalid signature for value `{1}` and client id {2}",
-    // config.getId(), value, clientId));
-    // return;
-    // }
-    // } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-    // throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    // }
+    // Check if transactions are signed by the clients
+    if (!verifyBlockSignatures(Block.fromJson(block))) {
+      logger.info(
+          MessageFormat.format("[{0}]: Invalid signature for block on COMMIT", config.getId()));
+      return;
+    }
 
     // Don't trigger the commit rule more than once per round
     if (instance.triggeredCommitQuorumRule(round)) {
@@ -460,10 +456,176 @@ public class NodeService implements UDPService {
       // Add the value to the ledger
       decide(consensusInstance, round, Block.fromJson(block));
 
+      // Apply block to the ledger
+      applyBlockAndReplyToClients(consensusInstance);
+
     } else {
       logger.info(
           MessageFormat.format("[{0}]: No valid COMMIT QUORUM for (λ, r) = ({1}, {2}), ignoring",
               config.getId(), consensusInstance, round));
+    }
+  }
+
+  private void applyBlockAndReplyToClients(int consensusInstance) {
+    if (consensusInstance > lastDecidedConsensusInstance.get()) {
+      logger.info(MessageFormat.format(
+          "[{0}]: Can't apply block for consensus instance {1} that is not decided", config.getId(),
+          consensusInstance));
+      return;
+    }
+
+    Block block = instanceInfo.get(consensusInstance).getDecidedBlock().get();
+
+    for (ClientRequest transaction : block.getTransactions()) {
+
+      switch (transaction.getType()) {
+
+        case BALANCE_REQUEST:
+          int clientId = transaction.getSenderId();
+          BalanceRequest balanceRequest = transaction.deserializeBalanceMessage();
+          int nonce = balanceRequest.getNonce();
+          String publicKeyPath = clientPublicKeys.get(clientId);
+
+          boolean valid = true;
+
+          // Check if the nonce is valid
+          if (clientNonces.get(clientId).contains(nonce)) {
+            valid = false;
+          }
+
+          // Check if the signature is valid
+          try {
+            if (!transaction.verifySignature(publicKeyPath)) {
+              valid = false;
+            }
+          } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
+              | InvalidKeySpecException e) {
+            throw new HDSException(ErrorMessage.SignatureVerificationError);
+          }
+
+          // Check if account exists
+          String publicKeyHash;
+          try {
+            publicKeyHash = RSACryptography.digest(balanceRequest.getPublicKey().toString());
+          } catch (NoSuchAlgorithmException e) {
+            throw new HDSException(ErrorMessage.DigestError);
+          }
+          if (!ledger.hasAccount(publicKeyHash)) {
+            valid = false;
+          }
+
+          if (!valid) {
+            // Send response to client
+            BalanceResponse balanceResponse =
+                new BalanceResponse(false, balanceRequest.getNonce(), Optional.empty());
+            ClientResponse response = new ClientResponse(config.getId(),
+                Message.Type.BALANCE_RESPONSE, balanceResponse.toJson());
+
+            clientLink.send(transaction.getSenderId(), response);
+
+          } else {
+            // Extract account and balance
+            Account account = ledger.getAccount(publicKeyHash);
+            int balance = account.getBalance();
+
+            // Register client nonce to avoid replay attacks
+            clientNonces.get(clientId).add(nonce);
+
+            // Send response to client
+            BalanceResponse balanceResponse =
+                new BalanceResponse(true, balanceRequest.getNonce(), Optional.of(balance));
+            ClientResponse response = new ClientResponse(config.getId(),
+                Message.Type.BALANCE_RESPONSE, balanceResponse.toJson());
+
+            clientLink.send(transaction.getSenderId(), response);
+          }
+
+          break;
+
+        case TRANSFER_REQUEST:
+          clientId = transaction.getSenderId();
+          TransferRequest transferRequest = transaction.deserializeTransferMessage();
+          nonce = transferRequest.getNonce();
+          publicKeyPath = clientPublicKeys.get(clientId);
+
+          PublicKey sourcePublicKey = transferRequest.getSourcePublicKey();
+          PublicKey destinationPublicKey = transferRequest.getDestinationPublicKey();
+
+          valid = true;
+
+          // Check if the nonce is valid
+          if (clientNonces.get(clientId).contains(nonce)) {
+            valid = false;
+          }
+
+          // Check if the signature is valid
+          try {
+            if (!transaction.verifySignature(publicKeyPath)) {
+              valid = false;
+            }
+          } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
+              | InvalidKeySpecException e) {
+            throw new HDSException(ErrorMessage.SignatureVerificationError);
+          }
+
+          // Check if source and destination accounts exist
+          String sourcePublicKeyHash;
+          String destinationPublicKeyHash;
+          try {
+            sourcePublicKeyHash = RSACryptography.digest(sourcePublicKey.toString());
+            destinationPublicKeyHash = RSACryptography.digest(destinationPublicKey.toString());
+          } catch (NoSuchAlgorithmException e) {
+            throw new HDSException(ErrorMessage.DigestError);
+          }
+          if (!ledger.hasAccount(sourcePublicKeyHash)
+              || !ledger.hasAccount(destinationPublicKeyHash)) {
+            valid = false;
+          }
+
+          Account sourceAccount = ledger.getAccount(sourcePublicKeyHash);
+          Account destinationAccount = ledger.getAccount(destinationPublicKeyHash);
+
+          // Check if the sender's accounts matches the source account
+          if (sourceAccount.getOwnerId() != clientId) {
+            valid = false;
+          }
+
+          // Check that the source account has enough balance
+          if (sourceAccount.getBalance() < transferRequest.getAmount()) {
+            valid = false;
+          }
+
+          if (!valid) {
+            // Send response to client
+            TransferResponse transferResponse = new TransferResponse(false,
+                transferRequest.getNonce(), transferRequest.getSourcePublicKey(),
+                transferRequest.getDestinationPublicKey(), transferRequest.getAmount());
+            ClientResponse response = new ClientResponse(config.getId(),
+                Message.Type.TRANSFER_RESPONSE, transferResponse.toJson());
+
+            clientLink.send(transaction.getSenderId(), response);
+          } else {
+            // Transfer amount
+            int amount = transferRequest.getAmount();
+            sourceAccount.subtractBalance(amount);
+            destinationAccount.addBalance(amount);
+
+            // Send response to client
+            TransferResponse transferResponse = new TransferResponse(true,
+                transferRequest.getNonce(), transferRequest.getSourcePublicKey(),
+                transferRequest.getDestinationPublicKey(), amount);
+            ClientResponse response = new ClientResponse(config.getId(),
+                Message.Type.TRANSFER_RESPONSE, transferResponse.toJson());
+
+            clientLink.send(transaction.getSenderId(), response);
+          }
+
+          break;
+
+        default:
+          throw new UnsupportedOperationException();
+
+      }
     }
   }
 
@@ -476,89 +638,9 @@ public class NodeService implements UDPService {
     lastDecidedConsensusInstance.set(consensusInstance);
     instanceInfo.get(consensusInstance).setDecidedBlock(block);
 
-    notifyClients(consensusInstance);
-
     // Notify waiting threads
     synchronized (waitingConsensusLock) {
       waitingConsensusLock.notifyAll();
-    }
-  }
-
-  public void notifyClients(int consensusInstance) {
-    if (consensusInstance > lastDecidedConsensusInstance.get()) {
-      logger.info(MessageFormat.format(
-          "[{0}]: Can't notify clients for consensus instance {1} that is not decided",
-          config.getId(), consensusInstance));
-      return;
-    }
-
-    InstanceInfo instance = instanceInfo.get(consensusInstance);
-    Block block = instance.getDecidedBlock().get();
-
-    for (ClientRequest message : block.getTransactions()) {
-
-      switch (message.getType()) {
-
-        case BALANCE_REQUEST:
-          BalanceRequest balanceRequest = message.deserializeBalanceMessage();
-          PublicKey accountPublicKey = balanceRequest.getPublicKey();
-          String publicKeyHash;
-
-          try {
-            publicKeyHash = RSACryptography.digest(accountPublicKey.toString());
-          } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error digesting public key");
-          }
-
-          // Extract account and balance
-          Account account = ledger.getAccount(publicKeyHash);
-          int balance = account.getBalance();
-
-          // Send response to client
-          BalanceResponse balanceResponse = new BalanceResponse(balanceRequest.getNonce(), balance);
-          ClientResponse response = new ClientResponse(config.getId(),
-              Message.Type.BALANCE_RESPONSE, balanceResponse.toJson());
-
-          clientLink.send(message.getSenderId(), response);
-
-          break;
-
-        case TRANSFER_REQUEST:
-          TransferRequest transferRequest = message.deserializeTransferMessage();
-          PublicKey sourcePublicKey = transferRequest.getSourcePublicKey();
-          PublicKey destinationPublicKey = transferRequest.getDestinationPublicKey();
-          String sourcePublicKeyHash;
-          String destinationPublicKeyHash;
-
-          try {
-            sourcePublicKeyHash = RSACryptography.digest(sourcePublicKey.toString());
-            destinationPublicKeyHash = RSACryptography.digest(destinationPublicKey.toString());
-          } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error digesting public key");
-          }
-
-          // Extract account and balance
-          Account sourceAccount = ledger.getAccount(sourcePublicKeyHash);
-          Account destinationAccount = ledger.getAccount(destinationPublicKeyHash);
-
-          // Transfer amount
-          int amount = transferRequest.getAmount();
-          sourceAccount.subtractBalance(amount);
-          destinationAccount.addBalance(amount);
-
-          // Send response to client
-          TransferResponse transferResponse = new TransferResponse(transferRequest.getNonce(),
-              sourcePublicKey, destinationPublicKey, amount);
-          response = new ClientResponse(config.getId(), Message.Type.TRANSFER_RESPONSE,
-              transferResponse.toJson());
-
-          clientLink.send(message.getSenderId(), response);
-
-          break;
-
-        default:
-          throw new UnsupportedOperationException();
-      }
     }
   }
 
@@ -612,22 +694,16 @@ public class NodeService implements UDPService {
       return false;
     }
 
-    // Check that all messages are signed by its sender
-    // for (ConsensusMessage m : preparedQuorum) {
-    // PrepareMessage pm = m.deserializePrepareMessage();
+    // Check if transactions are signed by the clients
+    for (ConsensusMessage m : preparedQuorum) {
+      PrepareMessage pm = m.deserializePrepareMessage();
 
-    // try {
-    // if (!pm.verifyValueSignature(this.clientPublicKeys.get(pm.getClientId()), pm.getValue())) {
-    // logger.info(MessageFormat.format(
-    // "[{0}]: Invalid prepared quorum for (λ, r) = ({1}, {2}), as that are invalid signatures,
-    // ignoring",
-    // config.getId(), consensusInstance, round));
-    // return false;
-    // }
-    // } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-    // throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    // }
-    // }
+      if (!verifyBlockSignatures(Block.fromJson(pm.getBlock()))) {
+        logger.info(MessageFormat.format("[{0}]: Invalid signature for block on prepared quorum",
+            config.getId()));
+        return false;
+      }
+    }
 
     // Check that all messages have the same instance
     if (preparedQuorum.stream().map(ConsensusMessage::getConsensusInstance).distinct()
@@ -836,16 +912,14 @@ public class NodeService implements UDPService {
       return false;
     }
 
-    // for (CommitMessage commitMessage : quorum) {
-    // try {
-    // if (!commitMessage.verifyValueSignature(
-    // this.clientPublicKeys.get(commitMessage.getClientId()), commitMessage.getValue())) {
-    // return false;
-    // }
-    // } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-    // throw new HDSSException(ErrorMessage.SignatureVerificationError);
-    // }
-    // }
+    for (CommitMessage commitMessage : quorum) {
+      if (!verifyBlockSignatures(Block.fromJson(commitMessage.getBlock()))) {
+        logger.info(MessageFormat.format("[{0}]: Invalid signature for block on commit quorum",
+            config.getId()));
+        return false;
+
+      }
+    }
 
     return true;
   }
@@ -870,7 +944,116 @@ public class NodeService implements UDPService {
         config.getId(), consensusInstance, round));
 
     stopTimer();
+
     decide(consensusInstance, round, Block.fromJson(block));
+
+    applyBlockAndReplyToClients(consensusInstance);
+  }
+
+  private boolean verifyBlockSignatures(Block block) {
+    for (ClientRequest request : block.getTransactions()) {
+      int clientId = request.getSenderId();
+      String publicKeyPath = clientPublicKeys.get(clientId);
+
+      int nonce;
+      if (request.getType() == Message.Type.BALANCE_REQUEST) {
+        nonce = request.deserializeBalanceMessage().getNonce();
+      } else if (request.getType() == Message.Type.TRANSFER_REQUEST) {
+        nonce = request.deserializeTransferMessage().getNonce();
+      } else {
+        throw new UnsupportedOperationException();
+      }
+
+      // Check if the nonce is valid
+      if (clientNonces.get(clientId).contains(nonce)) {
+        return false;
+      }
+
+      try {
+        if (!request.verifySignature(publicKeyPath)) {
+          return false;
+        }
+      } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
+          | InvalidKeySpecException e) {
+        throw new HDSException(ErrorMessage.SignatureVerificationError);
+      }
+
+    }
+
+    return true;
+  }
+
+  private boolean validateBlock(Block block) {
+    if (!verifyBlockSignatures(block)) {
+      return false;
+    }
+
+    for (ClientRequest transaction : block.getTransactions()) {
+      switch (transaction.getType()) {
+
+        // Source account must exist
+        case BALANCE_REQUEST:
+          BalanceRequest balanceRequest = transaction.deserializeBalanceMessage();
+          String publicKeyHash;
+
+          try {
+            publicKeyHash = RSACryptography.digest(balanceRequest.getPublicKey().toString());
+          } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error digesting public key");
+          }
+
+          if (!ledger.hasAccount(publicKeyHash)) {
+            return false;
+          }
+
+          break;
+
+        case TRANSFER_REQUEST:
+          int senderId = transaction.getSenderId();
+          TransferRequest transferRequest = transaction.deserializeTransferMessage();
+          String sourcePublicKeyHash;
+          String destinationPublicKeyHash;
+
+          // Amount must be positive
+          if (transferRequest.getAmount() <= 0) {
+            return false;
+          }
+
+          try {
+            sourcePublicKeyHash =
+                RSACryptography.digest(transferRequest.getSourcePublicKey().toString());
+            destinationPublicKeyHash =
+                RSACryptography.digest(transferRequest.getDestinationPublicKey().toString());
+          } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error digesting public key");
+          }
+
+          // Source and destination accounts must exist
+          if (!ledger.hasAccount(sourcePublicKeyHash)
+              || !ledger.hasAccount(destinationPublicKeyHash)) {
+            return false;
+          }
+
+          Account sourceAccount = ledger.getAccount(sourcePublicKeyHash);
+
+          // The source account must be owned by the sender
+          if (sourceAccount.getOwnerId() != senderId) {
+            return false;
+          }
+
+          // Source account must have enough balance
+          if (sourceAccount.getBalance() < transferRequest.getAmount()) {
+            return false;
+          }
+
+          break;
+
+        default:
+          throw new UnsupportedOperationException();
+      }
+    }
+
+    return true;
   }
 
   @Override

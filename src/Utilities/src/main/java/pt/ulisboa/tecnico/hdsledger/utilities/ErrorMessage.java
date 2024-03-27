@@ -13,7 +13,8 @@ public enum ErrorMessage {
                                       "Error while verifying signature"), InvalidSignature(
                                           "Invalid signature"), ErrorReadingPublicKey(
                                               "Error reading public key"), InvalidAmount(
-                                                  "Invalid amount");
+                                                  "Invalid amount"), DigestError(
+                                                      "Error while hashing");
 
   private final String message;
 

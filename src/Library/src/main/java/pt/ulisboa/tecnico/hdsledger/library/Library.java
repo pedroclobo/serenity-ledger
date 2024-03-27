@@ -24,6 +24,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
 import pt.ulisboa.tecnico.hdsledger.communication.application.ClientResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.application.TransferRequest;
+import pt.ulisboa.tecnico.hdsledger.communication.application.TransferResponse;
 import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
@@ -122,7 +123,7 @@ public class Library {
     }
 
     // Grab the first response
-    BalanceResponse response = this.responses.get(nonce).get(0).deserializeBalanceRequest();
+    BalanceResponse response = this.responses.get(nonce).get(0).deserializeBalanceResponse();
 
     // Clean up
     this.responses.remove(nonce);
@@ -131,12 +132,13 @@ public class Library {
     return response;
   }
 
-  public void transfer(int sourceId, int destinationId, int amount) {
-    transfer(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath(),
+  public TransferResponse transfer(int sourceId, int destinationId, int amount) {
+    return transfer(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath(),
         clientConfigs[destinationId - nodeConfigs.length - 1].getPublicKeyPath(), amount);
   }
 
-  public void transfer(String sourcePublicKeyPath, String destinationPublicKeyPath, int amount) {
+  public TransferResponse transfer(String sourcePublicKeyPath, String destinationPublicKeyPath,
+      int amount) {
     // Grab nonce of the request
     int nonce = this.nonce.getAndIncrement();
 
@@ -192,14 +194,19 @@ public class Library {
       throw new RuntimeException(e);
     }
 
+    // Grab the first response
+    TransferResponse response = this.responses.get(nonce).get(0).deserializeTransferResponse();
+
     // Clean up
     this.responses.remove(nonce);
     this.latches.remove(nonce);
+
+    return response;
   }
 
   private void uponBalanceResponse(ClientResponse response) {
     int senderId = response.getSenderId();
-    int nonce = response.deserializeBalanceRequest().getNonce();
+    int nonce = response.deserializeBalanceResponse().getNonce();
 
     // The balance was already confirmed
     if (!this.responses.containsKey(nonce)) {
@@ -225,7 +232,7 @@ public class Library {
     // TODO: verify that all messages are the same
     // There are enough responses and all have the same amount
     if (this.responses.get(nonce).size() > f && this.responses.get(nonce).stream()
-        .map(x -> x.deserializeBalanceRequest().getAmount()).distinct().count() == 1) {
+        .map(x -> x.deserializeBalanceResponse().getAmount()).distinct().count() == 1) {
       logger.info(
           MessageFormat.format("[{0}] - Received enough balance responses", clientConfig.getId()));
       synchronized (this.latches.get(nonce)) {
@@ -236,7 +243,7 @@ public class Library {
 
   private void uponTransferResponse(ClientResponse response) {
     int senderId = response.getSenderId();
-    int nonce = response.deserializeTransferRequest().getNonce();
+    int nonce = response.deserializeTransferResponse().getNonce();
 
     // The transfer was already confirmed
     if (!this.responses.containsKey(nonce)) {
