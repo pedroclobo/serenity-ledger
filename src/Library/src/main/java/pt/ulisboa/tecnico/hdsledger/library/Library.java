@@ -72,13 +72,17 @@ public class Library {
   }
 
   public BalanceResponse balance(int sourceId) {
-    // Client id
-    if (sourceId > nodeConfigs.length) {
-      return balance(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath());
-    }
-
     // Node id
-    return balance(nodeConfigs[sourceId - 1].getPublicKeyPath());
+    if (sourceId <= nodeConfigs.length) {
+      return balance(nodeConfigs[sourceId - 1].getPublicKeyPath());
+
+      // Client id
+    } else if (sourceId <= nodeConfigs.length + clientConfigs.length) {
+      return balance(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath());
+
+    } else {
+      throw new HDSException(ErrorMessage.NoSuchClient);
+    }
   }
 
   public BalanceResponse balance(String sourcePublicKeyPath) {
@@ -133,6 +137,15 @@ public class Library {
   }
 
   public TransferResponse transfer(int sourceId, int destinationId, int amount) {
+    if (!(nodeConfigs.length < sourceId && sourceId <= nodeConfigs.length + clientConfigs.length)) {
+      throw new HDSException(ErrorMessage.NoSuchClient);
+    }
+
+    if (!(nodeConfigs.length < destinationId
+        && destinationId <= nodeConfigs.length + clientConfigs.length)) {
+      throw new HDSException(ErrorMessage.NoSuchClient);
+    }
+
     return transfer(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath(),
         clientConfigs[destinationId - nodeConfigs.length - 1].getPublicKeyPath(), amount);
   }
@@ -145,6 +158,11 @@ public class Library {
     // Verify that amount is positive
     if (amount <= 0) {
       throw new HDSException(ErrorMessage.InvalidAmount);
+    }
+
+    // Verify that the source is the client issuing the operation
+    if (!sourcePublicKeyPath.equals(clientConfig.getPublicKeyPath())) {
+      throw new HDSException(ErrorMessage.InvalidTransferSource);
     }
 
     // Read source public key

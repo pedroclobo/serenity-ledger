@@ -14,7 +14,8 @@ public enum ErrorMessage {
                                           "Invalid signature"), ErrorReadingPublicKey(
                                               "Error reading public key"), InvalidAmount(
                                                   "Invalid amount"), DigestError(
-                                                      "Error while hashing");
+                                                      "Error while hashing"), InvalidTransferSource(
+                                                          "Invalid source account to perform transfer");
 
   private final String message;
 
