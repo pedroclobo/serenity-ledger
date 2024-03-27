@@ -39,4 +39,23 @@ public class Account {
     return true;
   }
 
+  @Override
+  public int hashCode() {
+    return 0;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof Account)) {
+      return false;
+    }
+    final Account other = (Account) obj;
+
+    return ownerId == other.ownerId && publicKeyHash.equals(other.publicKeyHash)
+        && balance == other.balance;
+  }
+
 }

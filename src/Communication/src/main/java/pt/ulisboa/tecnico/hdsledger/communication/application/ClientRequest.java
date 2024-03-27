@@ -53,4 +53,22 @@ public class ClientRequest extends Message {
     return RSACryptography.verify(this.message, publicKey, this.signature);
   }
 
+  @Override
+  public int hashCode() {
+    return 0;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof ClientRequest)) {
+      return false;
+    }
+    final ClientRequest other = (ClientRequest) obj;
+
+    return getSenderId() == other.getSenderId() && getType() == other.getType()
+        && message.equals(other.message) && signature.equals(other.signature);
+  }
 }

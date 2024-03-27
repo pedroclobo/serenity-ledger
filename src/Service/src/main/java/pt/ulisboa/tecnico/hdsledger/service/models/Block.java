@@ -41,4 +41,22 @@ public class Block {
     return new Gson().toJson(this);
   }
 
+  @Override
+  public int hashCode() {
+    return 0;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof Block)) {
+      return false;
+    }
+    final Block other = (Block) obj;
+
+    return consensusInstance == other.consensusInstance && transactions.equals(other.transactions);
+  }
+
 }
