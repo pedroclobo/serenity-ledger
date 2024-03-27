@@ -419,14 +419,15 @@ public class NodeService implements UDPService {
               config.getId(), consensusInstance, round));
 
       // Safe to get() as hasCommitQuorum returned true
-      Set<CommitMessage> commitQuorum = messages.getCommitQuorum(consensusInstance).get();
+      Set<ConsensusMessage> commitQuorum = messages.getCommitQuorum(consensusInstance).get();
 
       // Update instance committed values
       instance = this.instanceInfo.get(consensusInstance);
       instance.setCommittedRound(round);
       instance.setCommitQuorum(commitQuorum);
       instance.setTriggeredCommitQuorumRule(round);
-      block = commitQuorum.iterator().next().getBlock();
+      block =
+          commitQuorum.stream().map(m -> m.deserializeCommitMessage().getBlock()).findFirst().get();
 
       // Stop the timer
       stopTimer();
@@ -868,18 +869,24 @@ public class NodeService implements UDPService {
     }
   }
 
-  // TODO: verify instance, same round, senders
-  public synchronized boolean verifyCommitQuorum(Set<CommitMessage> quorum) {
+  public synchronized boolean verifyCommitQuorum(Set<ConsensusMessage> quorum) {
     int n = config.getN();
     int f = (n - 1) / 3;
     int quorumSize = 2 * f + 1;
 
+    // There must be at least 2f + 1 messages
     if (quorum.size() < quorumSize) {
       return false;
     }
 
+    // All messages must come from different senders
+    if (quorum.stream().map(ConsensusMessage::getSenderId).distinct().count() != quorum.size()) {
+      return false;
+    }
+
     // All commit messages must have the same value
-    long valueCount = quorum.stream().map(CommitMessage::getBlock).distinct().count();
+    long valueCount =
+        quorum.stream().map(m -> m.deserializeCommitMessage().getBlock()).distinct().count();
 
     if (valueCount != 1) {
       return false;
@@ -893,14 +900,20 @@ public class NodeService implements UDPService {
 
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
-    String block = commitQuorumMessage.getQuorum().iterator().next().getBlock();
-
-    verifyCommitQuorum(commitQuorumMessage.getQuorum());
+    String block = commitQuorumMessage.getQuorum().stream()
+        .map(m -> m.deserializeCommitMessage().getBlock()).findFirst().get();
 
     if (consensusInstance <= lastDecidedConsensusInstance.get()) {
       logger.info(MessageFormat.format(
           "[{0}]: Received COMMIT_QUORUM message for already decided λ = {1}, ignoring",
           config.getId(), consensusInstance));
+      return;
+    }
+
+    if (!verifyCommitQuorum(commitQuorumMessage.getQuorum())) {
+      logger.info(
+          MessageFormat.format("[{0}]: Invalid COMMIT_QUORUM for (λ, r) = ({1}, {2}), ignoring",
+              config.getId(), consensusInstance, round));
       return;
     }
 
