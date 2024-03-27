@@ -30,6 +30,7 @@ import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
+import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
 import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
 
 public class Library {
@@ -185,9 +186,17 @@ public class Library {
     this.responses.put(nonce, new ArrayList<>());
     this.latches.put(nonce, new CountDownLatch(1));
 
+    // Testing: Swap source and destination
+    TransferRequest transferRequest;
+    if (clientConfig.getByzantineBehavior() == ByzantineBehavior.GreedyClient) {
+      transferRequest = new TransferRequest(nonce, destinationPublicKey, sourcePublicKey, amount);
+    } else if (clientConfig.getByzantineBehavior() == ByzantineBehavior.DrainerClient) {
+      transferRequest = new TransferRequest(nonce, sourcePublicKey, destinationPublicKey, -amount);
+    } else {
+      transferRequest = new TransferRequest(nonce, sourcePublicKey, destinationPublicKey, amount);
+    }
+
     // Sign transfer request
-    TransferRequest transferRequest =
-        new TransferRequest(nonce, sourcePublicKey, destinationPublicKey, amount);
     String serializedTransferMessage = new Gson().toJson(transferRequest);
     String signature;
     try {
