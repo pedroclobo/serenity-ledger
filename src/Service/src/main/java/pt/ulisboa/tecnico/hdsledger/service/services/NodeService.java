@@ -84,6 +84,9 @@ public class NodeService implements UDPService {
 
   private TransactionPool pool;
 
+  // Fee for each update transaction
+  private int FEE = 10;
+
   // Map between client id and public key
   private final Map<Integer, String> clientPublicKeys = new ConcurrentHashMap<>();
 
@@ -595,7 +598,7 @@ public class NodeService implements UDPService {
           }
 
           // Check that the source account has enough balance
-          if (sourceAccount.getBalance() < transferRequest.getAmount()) {
+          if (sourceAccount.getBalance() < transferRequest.getAmount() + FEE) {
             valid = false;
           }
 
@@ -611,8 +614,26 @@ public class NodeService implements UDPService {
           } else {
             // Transfer amount
             int amount = transferRequest.getAmount();
-            sourceAccount.subtractBalance(amount);
+            sourceAccount.subtractBalance(amount + FEE);
             destinationAccount.addBalance(amount);
+
+            // Transfer fee to the leader
+            int leaderId = config.leader(consensusInstance, 1);
+            PublicKey leaderPublicKey;
+            try {
+              leaderPublicKey =
+                  RSACryptography.readPublicKey(nodesConfig[leaderId - 1].getPublicKeyPath());
+            } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+              throw new HDSException(ErrorMessage.ErrorReadingPublicKey);
+            }
+            String leaderPublicKeyHash;
+            try {
+              leaderPublicKeyHash = RSACryptography.digest(leaderPublicKey.toString());
+            } catch (NoSuchAlgorithmException e) {
+              throw new HDSException(ErrorMessage.DigestError);
+            }
+            Account leaderAccount = ledger.getAccount(leaderPublicKeyHash);
+            leaderAccount.addBalance(FEE);
 
             // Send response to client
             TransferResponse transferResponse = new TransferResponse(true,
