@@ -53,11 +53,12 @@ class NoneByzantineBehaviorTest extends ByzantineBehaviorTest {
       ledgers.add(ledger);
     }
 
-    long sizeCount = sizes.stream().filter(size -> size == 5).count();
-    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + 5);
+    int maxSize = sizes.stream().mapToInt(Integer::intValue).max().getAsInt();
+    long sizeCount = sizes.stream().filter(size -> size == maxSize).count();
+    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + maxSize);
 
     List<Ledger> ledgersWithSizeFPlus1 =
-        ledgers.stream().filter(ledger -> ledger.getLedger().size() == 5).toList();
+        ledgers.stream().filter(ledger -> ledger.getLedger().size() == maxSize).toList();
     assertEquals(1, ledgersWithSizeFPlus1.stream().distinct().count(), "Ledgers should be equal");
   }
 
