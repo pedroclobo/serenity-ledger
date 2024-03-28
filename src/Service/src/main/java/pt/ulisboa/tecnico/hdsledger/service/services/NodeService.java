@@ -516,6 +516,9 @@ public class NodeService implements UDPService {
             valid = false;
           }
 
+          // Register client nonce to avoid replay attacks
+          clientNonces.get(clientId).add(nonce);
+
           if (!valid) {
             // Send response to client
             BalanceResponse balanceResponse =
@@ -529,9 +532,6 @@ public class NodeService implements UDPService {
             // Extract account and balance
             Account account = ledger.getAccount(publicKeyHash);
             int balance = account.getBalance();
-
-            // Register client nonce to avoid replay attacks
-            clientNonces.get(clientId).add(nonce);
 
             // Send response to client
             BalanceResponse balanceResponse =
@@ -601,6 +601,9 @@ public class NodeService implements UDPService {
           if (sourceAccount.getBalance() < transferRequest.getAmount() + FEE) {
             valid = false;
           }
+
+          // Register client nonce to avoid replay attacks
+          clientNonces.get(clientId).add(nonce);
 
           if (!valid) {
             // Send response to client
