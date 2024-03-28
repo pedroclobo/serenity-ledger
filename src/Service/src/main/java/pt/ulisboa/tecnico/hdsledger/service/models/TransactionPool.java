@@ -29,7 +29,11 @@ public class TransactionPool {
     synchronized (pool) {
       if (pool.size() >= blockSize) {
         Block block = new Block();
-        block.setTransactions(pool);
+        block.setTransactions(new ArrayList<>(pool.subList(0, blockSize)));
+        return Optional.of(block);
+      } else if (pool.size() > 0) {
+        Block block = new Block();
+        block.setTransactions(new ArrayList<>(pool));
         return Optional.of(block);
       }
 
