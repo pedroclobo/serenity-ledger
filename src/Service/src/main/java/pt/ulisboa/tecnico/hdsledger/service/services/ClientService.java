@@ -21,6 +21,7 @@ import pt.ulisboa.tecnico.hdsledger.utilities.HDSLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
+import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig.ByzantineBehavior;
 import pt.ulisboa.tecnico.hdsledger.utilities.exceptions.InvalidSignatureException;
 
 public class ClientService implements UDPService {
@@ -54,6 +55,9 @@ public class ClientService implements UDPService {
     this.timer.schedule(new TimerTask() {
       @Override
       public void run() {
+        if (config.getByzantineBehavior() == ByzantineBehavior.Silent) {
+          return;
+        }
         startConsensus();
       }
     }, 0, TIMEOUT);
@@ -144,6 +148,12 @@ public class ClientService implements UDPService {
             } catch (InvalidSignatureException e) {
               logger.info(MessageFormat.format("[{0}]: EXCEPTION: {1}", this.config.getId(),
                   e.getMessage()));
+              continue;
+            }
+
+            if (config.getByzantineBehavior() == ByzantineBehavior.Drop
+                || config.getByzantineBehavior() == ByzantineBehavior.Silent) {
+              logger.info(MessageFormat.format("[{0}]: Ignoring message", this.config.getId()));
               continue;
             }
 
