@@ -110,8 +110,12 @@ public class Library {
     }
 
     // Create latch and response vector for this request
-    this.responses.put(nonce, new ArrayList<>());
-    this.latches.put(nonce, new CountDownLatch(1));
+    synchronized (this.responses) {
+      this.responses.put(nonce, new ArrayList<>());
+    }
+    synchronized (this.latches) {
+      this.latches.put(nonce, new CountDownLatch(1));
+    }
 
     // Multicast balance request
     logger.info(MessageFormat.format("[{0}] - Multicasting balance request for {1} with nonce {2}",
@@ -131,8 +135,12 @@ public class Library {
     BalanceResponse response = this.responses.get(nonce).get(0).deserializeBalanceResponse();
 
     // Clean up
-    this.responses.remove(nonce);
-    this.latches.remove(nonce);
+    synchronized (this.responses) {
+      this.responses.remove(nonce);
+    }
+    synchronized (this.latches) {
+      this.latches.remove(nonce);
+    }
 
     return response;
   }
@@ -183,8 +191,12 @@ public class Library {
     }
 
     // Create latch and response vector for this request
-    this.responses.put(nonce, new ArrayList<>());
-    this.latches.put(nonce, new CountDownLatch(1));
+    synchronized (this.responses) {
+      this.responses.put(nonce, new ArrayList<>());
+    }
+    synchronized (this.latches) {
+      this.latches.put(nonce, new CountDownLatch(1));
+    }
 
     // Testing: Swap source and destination
     TransferRequest transferRequest;
@@ -235,35 +247,37 @@ public class Library {
     int senderId = response.getSenderId();
     int nonce = response.deserializeBalanceResponse().getNonce();
 
-    // The balance was already confirmed
-    if (!this.responses.containsKey(nonce)) {
-      logger.info(MessageFormat.format(
-          "[{0}] - Balance response with nonce {1} from {2} for already confirmed balance",
-          clientConfig.getId(), nonce, senderId));
-      return;
-    }
+    synchronized (this.responses) {
+      // The balance was already confirmed
+      if (!this.responses.containsKey(nonce)) {
+        logger.info(MessageFormat.format(
+            "[{0}] - Balance response with nonce {1} from {2} for already confirmed balance",
+            clientConfig.getId(), nonce, senderId));
+        return;
+      }
 
-    // Verify if the senderId is already in the responses
-    if (this.responses.get(nonce).stream().anyMatch(r -> r.getSenderId() == senderId)) {
-      logger.info(MessageFormat.format("[{0}] - Duplicate balance response from {1}",
-          clientConfig.getId(), senderId));
-      return;
-    }
+      // Verify if the senderId is already in the responses
+      if (this.responses.get(nonce).stream().anyMatch(r -> r.getSenderId() == senderId)) {
+        logger.info(MessageFormat.format("[{0}] - Duplicate balance response from {1}",
+            clientConfig.getId(), senderId));
+        return;
+      }
 
-    logger.info(MessageFormat.format("[{0}] - Received balance response from {1}",
-        clientConfig.getId(), response.getSenderId()));
+      logger.info(MessageFormat.format("[{0}] - Received balance response from {1}",
+          clientConfig.getId(), response.getSenderId()));
 
-    // Add message to responses
-    this.responses.get(nonce).add(response);
+      // Add message to responses
+      this.responses.get(nonce).add(response);
 
-    // TODO: verify that all messages are the same
-    // There are enough responses and all have the same amount
-    if (this.responses.get(nonce).size() > f && this.responses.get(nonce).stream()
-        .map(x -> x.deserializeBalanceResponse().getAmount()).distinct().count() == 1) {
-      logger.info(
-          MessageFormat.format("[{0}] - Received enough balance responses", clientConfig.getId()));
-      synchronized (this.latches.get(nonce)) {
-        this.latches.get(nonce).countDown();
+      // TODO: verify that all messages are the same
+      // There are enough responses and all have the same amount
+      if (this.responses.get(nonce).size() > f && this.responses.get(nonce).stream()
+          .map(x -> x.deserializeBalanceResponse().getAmount()).distinct().count() == 1) {
+        logger.info(MessageFormat.format("[{0}] - Received enough balance responses",
+            clientConfig.getId()));
+        synchronized (this.latches.get(nonce)) {
+          this.latches.get(nonce).countDown();
+        }
       }
     }
   }
@@ -272,34 +286,36 @@ public class Library {
     int senderId = response.getSenderId();
     int nonce = response.deserializeTransferResponse().getNonce();
 
-    // The transfer was already confirmed
-    if (!this.responses.containsKey(nonce)) {
-      logger.info(
-          MessageFormat.format("[{0}] - Transfer response from {1} for already confirmed transfer",
-              clientConfig.getId(), senderId));
-      return;
-    }
+    synchronized (this.responses) {
+      // The transfer was already confirmed
+      if (!this.responses.containsKey(nonce)) {
+        logger.info(MessageFormat.format(
+            "[{0}] - Transfer response from {1} for already confirmed transfer",
+            clientConfig.getId(), senderId));
+        return;
+      }
 
-    // Verify if the senderId is already in the responses
-    if (this.responses.get(nonce).stream().anyMatch(r -> r.getSenderId() == senderId)) {
-      logger.info(MessageFormat.format("[{0}] - Duplicate transfer response from {1}",
-          clientConfig.getId(), senderId));
-      return;
-    }
+      // Verify if the senderId is already in the responses
+      if (this.responses.get(nonce).stream().anyMatch(r -> r.getSenderId() == senderId)) {
+        logger.info(MessageFormat.format("[{0}] - Duplicate transfer response from {1}",
+            clientConfig.getId(), senderId));
+        return;
+      }
 
-    logger.info(MessageFormat.format("[{0}] - Received transfer response from {1}",
-        clientConfig.getId(), response.getSenderId()));
+      logger.info(MessageFormat.format("[{0}] - Received transfer response from {1}",
+          clientConfig.getId(), response.getSenderId()));
 
-    // Add message to responses
-    this.responses.get(nonce).add(response);
+      // Add message to responses
+      this.responses.get(nonce).add(response);
 
-    // TODO: verify that all messages are the same
-    // There are enough responses
-    if (this.responses.get(nonce).size() > f) {
-      logger.info(
-          MessageFormat.format("[{0}] - Received enough transfer responses", clientConfig.getId()));
-      synchronized (this.latches.get(nonce)) {
-        this.latches.get(nonce).countDown();
+      // TODO: verify that all messages are the same
+      // There are enough responses
+      if (this.responses.get(nonce).size() > f) {
+        logger.info(MessageFormat.format("[{0}] - Received enough transfer responses",
+            clientConfig.getId()));
+        synchronized (this.latches.get(nonce)) {
+          this.latches.get(nonce).countDown();
+        }
       }
     }
   }
