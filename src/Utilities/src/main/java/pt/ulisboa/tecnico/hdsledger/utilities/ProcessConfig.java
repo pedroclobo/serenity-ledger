@@ -58,10 +58,14 @@ public class ProcessConfig {
     return byzantineBehavior;
   }
 
-  public boolean isLeader(int consensusInstance, int round) {
+  public int leader(int consensusInstance, int round) {
     int a = (consensusInstance - 1) % N;
     int b = (round - 1) % N;
 
-    return ((a + b) % N + 1) == id;
+    return (a + b) % N + 1;
+  }
+
+  public boolean isLeader(int consensusInstance, int round) {
+    return leader(consensusInstance, round) == id;
   }
 }

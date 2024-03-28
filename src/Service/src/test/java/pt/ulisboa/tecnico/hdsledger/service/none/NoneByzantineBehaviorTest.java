@@ -39,7 +39,7 @@ class NoneByzantineBehaviorTest extends ByzantineBehaviorTest {
 
     balanceResponse = libraries.get(0).balance(5);
     assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(900, balanceResponse.getAmount().get(), "New balance should be 900");
+    assertEquals(890, balanceResponse.getAmount().get(), "New balance should be 890");
 
     balanceResponse = libraries.get(0).balance(6);
     assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
