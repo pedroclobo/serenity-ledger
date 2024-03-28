@@ -175,6 +175,11 @@ public class NodeService implements UDPService {
    * Wait for the last consensus instance to be decided and start a new one
    */
   public void waitAndStartConsensus(Block inputBlock) {
+    if (config.getByzantineBehavior() == ByzantineBehavior.Silent) {
+      logger.info(
+          MessageFormat.format("[{0}]: I'm silent, ignoring consensus invocation", config.getId()));
+      return;
+    }
     // Only start a consensus instance if the last one was decided
     synchronized (waitingConsensusLock) {
       while (lastDecidedConsensusInstance.get() < currentConsensusInstance.get()) {
@@ -999,7 +1004,8 @@ public class NodeService implements UDPService {
             }
 
             // Byzantine Tests
-            if (config.getByzantineBehavior() == ByzantineBehavior.Drop) {
+            if (config.getByzantineBehavior() == ByzantineBehavior.Drop
+                || config.getByzantineBehavior() == ByzantineBehavior.Silent) {
               logger.info(MessageFormat.format("[{0}]: Dropping message", this.config.getId()));
               continue;
             }
