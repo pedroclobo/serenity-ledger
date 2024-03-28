@@ -145,7 +145,9 @@ public class NodeService implements UDPService {
         logger.info(
             MessageFormat.format("[{0}]: Timer fired, starting round change", config.getId()));
       }
-    }, TIMEOUT);
+    }, TIMEOUT
+        * (int) (Math.pow(2, instanceInfo.get(currentConsensusInstance.get()).getCurrentRound())
+            - 1));
   }
 
   /*
