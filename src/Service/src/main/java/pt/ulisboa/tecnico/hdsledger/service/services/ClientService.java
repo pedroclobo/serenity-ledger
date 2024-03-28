@@ -8,6 +8,8 @@ import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
@@ -34,6 +36,9 @@ public class ClientService implements UDPService {
   private final NodeService nodeService;
   // Transaction pool
   private final TransactionPool pool;
+  // Timer (to call consensus after a certain time)
+  private Timer timer;
+  private final int TIMEOUT = 3000;
 
   public ClientService(Link link, ProcessConfig config, ProcessConfig[] clientConfigs,
       NodeService nodeService, TransactionPool pool, boolean debug) {
@@ -44,6 +49,14 @@ public class ClientService implements UDPService {
     this.clientConfigs = clientConfigs;
     this.nodeService = nodeService;
     this.pool = pool;
+
+    this.timer = new Timer();
+    this.timer.schedule(new TimerTask() {
+      @Override
+      public void run() {
+        startConsensus();
+      }
+    }, 0, TIMEOUT);
   }
 
   public ProcessConfig getConfig() {
@@ -111,6 +124,9 @@ public class ClientService implements UDPService {
     if (block.isPresent()) {
       logger.info(MessageFormat.format("[{0}]: Starting consensus for block", this.config.getId()));
       nodeService.waitAndStartConsensus(block.get());
+    } else {
+      logger.info(
+          MessageFormat.format("[{0}]: No transactions to start consensus", this.config.getId()));
     }
   }
 

@@ -59,6 +59,9 @@ public class ProcessConfig {
   }
 
   public boolean isLeader(int consensusInstance, int round) {
-    return ((round - 1) % N) + 1 == id;
+    int a = (consensusInstance - 1) % N;
+    int b = (round - 1) % N;
+
+    return ((a + b) % N + 1) == id;
   }
 }
