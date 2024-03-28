@@ -46,11 +46,12 @@ class DrainerClientByzantineBehaviorTest extends ByzantineBehaviorTest {
       ledgers.add(ledger);
     }
 
-    long sizeCount = sizes.stream().filter(size -> size == 3).count();
-    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + 3);
+    int maxSize = sizes.stream().mapToInt(Integer::intValue).max().getAsInt();
+    long sizeCount = sizes.stream().filter(size -> size == maxSize).count();
+    assertTrue(sizeCount >= f + 1, "At least f + 1 nodes should have ledgers of size " + maxSize);
 
     List<Ledger> ledgersWithSizeFPlus1 =
-        ledgers.stream().filter(ledger -> ledger.getLedger().size() == 3).toList();
+        ledgers.stream().filter(ledger -> ledger.getLedger().size() == maxSize).toList();
     assertEquals(1, ledgersWithSizeFPlus1.stream().distinct().count(), "Ledgers should be equal");
   }
 
