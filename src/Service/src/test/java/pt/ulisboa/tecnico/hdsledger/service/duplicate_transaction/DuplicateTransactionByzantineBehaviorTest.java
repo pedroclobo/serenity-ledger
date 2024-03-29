@@ -37,13 +37,16 @@ public class DuplicateTransactionByzantineBehaviorTest extends ByzantineBehavior
     TransferResponse transferResponse = libraries.get(0).transfer(5, 6, 100);
     assertTrue(transferResponse.isSuccessful(), "Transfer request should be successful");
 
+    transferResponse = libraries.get(0).transfer(5, 6, 100);
+    assertTrue(transferResponse.isSuccessful(), "Transfer request should be successful");
+
     balanceResponse = libraries.get(0).balance(5);
     assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(890, balanceResponse.getAmount().get(), "New balance should be 890");
+    assertEquals(780, balanceResponse.getAmount().get(), "New balance should be 780");
 
     balanceResponse = libraries.get(0).balance(6);
     assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(1100, balanceResponse.getAmount().get(), "New balance should be 1100");
+    assertEquals(1200, balanceResponse.getAmount().get(), "New balance should be 1200");
 
     List<Integer> sizes = new ArrayList<>();
     List<Ledger> ledgers = new ArrayList<>();
