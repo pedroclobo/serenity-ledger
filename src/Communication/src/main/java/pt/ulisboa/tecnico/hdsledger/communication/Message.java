@@ -7,7 +7,7 @@ import com.google.gson.Gson;
 public class Message implements Serializable {
 
   // Sender identifier
-  private int senderId;
+  private final int senderId;
   // Message identifier
   private int messageId;
   // Message type
@@ -24,10 +24,6 @@ public class Message implements Serializable {
 
   public int getSenderId() {
     return senderId;
-  }
-
-  public void setSenderId(int senderId) {
-    this.senderId = senderId;
   }
 
   public int getMessageId() {

@@ -5,7 +5,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import pt.ulisboa.tecnico.hdsledger.communication.consensus.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.consensus.ConsensusMessage;
 
 public class InstanceInfo {
@@ -16,19 +15,17 @@ public class InstanceInfo {
   private Optional<Block> preparedBlock;
   private Optional<Set<ConsensusMessage>> preparedQuorum;
 
-  private Block inputBlock;
+  private final Block inputBlock;
 
-  private Optional<CommitMessage> commitMessage;
-  private Optional<Integer> committedRound;
   private Optional<Set<ConsensusMessage>> commitQuorum;
 
   private Optional<Block> decidedBlock;
 
-  private Map<Integer, Boolean> triggeredPrePrepareRule;
-  private Map<Integer, Boolean> triggeredPrepareQuorumRule;
-  private Map<Integer, Boolean> triggeredCommitQuorumRule;
-  private Map<Integer, Boolean> triggeredRoundChangeSetRule;
-  private Map<Integer, Boolean> triggeredRoundChangeQuorumRule;
+  private final Map<Integer, Boolean> triggeredPrePrepareRule;
+  private final Map<Integer, Boolean> triggeredPrepareQuorumRule;
+  private final Map<Integer, Boolean> triggeredCommitQuorumRule;
+  private final Map<Integer, Boolean> triggeredRoundChangeSetRule;
+  private final Map<Integer, Boolean> triggeredRoundChangeQuorumRule;
 
   public InstanceInfo(Block inputBlock) {
     this.currentRound = 1;
@@ -39,8 +36,6 @@ public class InstanceInfo {
 
     this.inputBlock = inputBlock;
 
-    this.commitMessage = Optional.empty();
-    this.committedRound = Optional.empty();
     this.commitQuorum = Optional.empty();
 
     this.decidedBlock = Optional.empty();
@@ -86,26 +81,6 @@ public class InstanceInfo {
 
   public Block getInputBlock() {
     return inputBlock;
-  }
-
-  public void setInputBlock(Block inputBlock) {
-    this.inputBlock = inputBlock;
-  }
-
-  public Optional<CommitMessage> getCommitMessage() {
-    return commitMessage;
-  }
-
-  public void setCommitMessage(CommitMessage commitMessage) {
-    this.commitMessage = Optional.of(commitMessage);
-  }
-
-  public Optional<Integer> getCommittedRound() {
-    return committedRound;
-  }
-
-  public void setCommittedRound(int committedRound) {
-    this.committedRound = Optional.of(committedRound);
   }
 
   public Optional<Set<ConsensusMessage>> getCommitQuorum() {

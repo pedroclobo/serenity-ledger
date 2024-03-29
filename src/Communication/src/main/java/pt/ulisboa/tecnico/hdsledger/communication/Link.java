@@ -18,7 +18,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class Link {
 
@@ -69,10 +68,6 @@ public class Link {
     }
   }
 
-  public void ackAll(List<Integer> messageIds) {
-    receivedAcks.addAll(messageIds);
-  }
-
   /*
    * Broadcasts a message to all nodes in the network
    *
@@ -86,18 +81,7 @@ public class Link {
 
   public void quorumMulticast(Message data) {
     int f = (nodes.size() - 1) / 3;
-    Collection<Integer> destIds =
-        nodes.keySet().stream().limit(2 * f + 1).collect(Collectors.toList());
-
-    Gson gson = new Gson();
-    for (int destId : destIds) {
-      send(destId, gson.fromJson(gson.toJson(data), data.getClass()));
-    }
-  }
-
-  public void smallMulticast(Message data) {
-    int f = (nodes.size() - 1) / 3;
-    Collection<Integer> destIds = nodes.keySet().stream().limit(f + 1).collect(Collectors.toList());
+    Collection<Integer> destIds = nodes.keySet().stream().limit(2 * f + 1).toList();
 
     Gson gson = new Gson();
     for (int destId : destIds) {
@@ -206,13 +190,13 @@ public class Link {
    */
   public Message receive() throws IOException, ClassNotFoundException, InvalidSignatureException {
 
-    Message message = null;
+    Message message;
     SignedMessage signedMessage = null;
-    String serialized = "";
-    Boolean local = false;
+    String serialized;
+    boolean local = false;
     DatagramPacket response = null;
 
-    if (this.localhostQueue.size() > 0) {
+    if (!this.localhostQueue.isEmpty()) {
       message = this.localhostQueue.poll();
       local = true;
       this.receivedAcks.add(message.getMessageId());

@@ -27,23 +27,23 @@ class Drop1ByzantineBehaviorTest extends ByzantineBehaviorTest {
     }
 
     BalanceResponse balanceResponse = libraries.get(0).balance(5);
-    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(1000, balanceResponse.getAmount().get(), "Initial balance should be 1000");
+    assertTrue(balanceResponse.successful(), "Balance request should be successful");
+    assertEquals(1000, balanceResponse.amount().get(), "Initial balance should be 1000");
 
     balanceResponse = libraries.get(0).balance(6);
-    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(1000, balanceResponse.getAmount().get(), "Initial balance should be 1000");
+    assertTrue(balanceResponse.successful(), "Balance request should be successful");
+    assertEquals(1000, balanceResponse.amount().get(), "Initial balance should be 1000");
 
     TransferResponse transferResponse = libraries.get(0).transfer(5, 6, 100);
-    assertTrue(transferResponse.isSuccessful(), "Transfer request should be successful");
+    assertTrue(transferResponse.successful(), "Transfer request should be successful");
 
     balanceResponse = libraries.get(0).balance(5);
-    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(890, balanceResponse.getAmount().get(), "New balance should be 890");
+    assertTrue(balanceResponse.successful(), "Balance request should be successful");
+    assertEquals(890, balanceResponse.amount().get(), "New balance should be 890");
 
     balanceResponse = libraries.get(0).balance(6);
-    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(1100, balanceResponse.getAmount().get(), "New balance should be 1100");
+    assertTrue(balanceResponse.successful(), "Balance request should be successful");
+    assertEquals(1100, balanceResponse.amount().get(), "New balance should be 1100");
 
     List<Integer> sizes = new ArrayList<>();
     List<Ledger> ledgers = new ArrayList<>();

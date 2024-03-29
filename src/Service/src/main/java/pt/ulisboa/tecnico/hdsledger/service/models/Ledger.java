@@ -13,9 +13,9 @@ import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class Ledger {
 
-  private List<Block> ledger;
+  private final List<Block> ledger;
   // Map from public key hash to account
-  private Map<String, Account> accounts;
+  private final Map<String, Account> accounts;
 
   public Ledger(ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs) {
     ledger = new ArrayList<>();
@@ -57,8 +57,8 @@ public class Ledger {
     return ledger;
   }
 
-  public boolean hasAccount(String publicKeyHash) {
-    return accounts.containsKey(publicKeyHash);
+  public boolean doesNotHaveAccount(String publicKeyHash) {
+    return !accounts.containsKey(publicKeyHash);
   }
 
   public Account getAccount(String publicKeyHash) {
@@ -81,10 +81,9 @@ public class Ledger {
     if (obj == this) {
       return true;
     }
-    if (!(obj instanceof Ledger)) {
+    if (!(obj instanceof Ledger other)) {
       return false;
     }
-    Ledger other = (Ledger) obj;
 
     return ledger.equals(other.ledger) && accounts.equals(other.accounts);
   }

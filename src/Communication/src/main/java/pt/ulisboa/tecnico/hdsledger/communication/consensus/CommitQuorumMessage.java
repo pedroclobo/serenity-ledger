@@ -7,17 +7,7 @@ import com.google.gson.GsonBuilder;
 
 import pt.ulisboa.tecnico.hdsledger.utilities.OptionalTypeAdapter;
 
-public class CommitQuorumMessage {
-
-  private Set<ConsensusMessage> quorum;
-
-  public CommitQuorumMessage(Set<ConsensusMessage> quorum) {
-    this.quorum = quorum;
-  }
-
-  public Set<ConsensusMessage> getQuorum() {
-    return quorum;
-  }
+public record CommitQuorumMessage(Set<ConsensusMessage> quorum) {
 
   public String toJson() {
     GsonBuilder gsonBuilder = new GsonBuilder();

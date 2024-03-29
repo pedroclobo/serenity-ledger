@@ -6,9 +6,9 @@ import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class BalanceRequest {
 
-  private int nonce;
+  private final int nonce;
   // Serialized source public key
-  private String sourcePublicKey;
+  private final String sourcePublicKey;
 
   public BalanceRequest(int nonce, PublicKey sourcePublicKey) {
     this.nonce = nonce;

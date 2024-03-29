@@ -37,19 +37,19 @@ public class Library {
 
   private final HDSLogger logger;
 
-  private int clientId;
-  private ProcessConfig[] nodeConfigs;
-  private ProcessConfig[] clientConfigs;
-  private ProcessConfig clientConfig;
+  private final int clientId;
+  private final ProcessConfig[] nodeConfigs;
+  private final ProcessConfig[] clientConfigs;
+  private final ProcessConfig clientConfig;
 
-  private int f;
+  private final int f;
 
-  private Link link;
+  private final Link link;
 
-  private AtomicInteger nonce;
+  private final AtomicInteger nonce;
 
-  private Map<Integer, List<ClientResponse>> responses;
-  private Map<Integer, CountDownLatch> latches;
+  private final Map<Integer, List<ClientResponse>> responses;
+  private final Map<Integer, CountDownLatch> latches;
 
   public Library(int clientId, ProcessConfig[] nodeConfigs, ProcessConfig[] clientConfigs,
       boolean debug) {
@@ -245,7 +245,7 @@ public class Library {
 
   private void uponBalanceResponse(ClientResponse response) {
     int senderId = response.getSenderId();
-    int nonce = response.deserializeBalanceResponse().getNonce();
+    int nonce = response.deserializeBalanceResponse().nonce();
 
     synchronized (this.responses) {
       // The balance was already confirmed
@@ -272,7 +272,7 @@ public class Library {
       // TODO: verify that all messages are the same
       // There are enough responses and all have the same amount
       if (this.responses.get(nonce).size() > f && this.responses.get(nonce).stream()
-          .map(x -> x.deserializeBalanceResponse().getAmount()).distinct().count() == 1) {
+          .map(x -> x.deserializeBalanceResponse().amount()).distinct().count() == 1) {
         logger.info(MessageFormat.format("[{0}] - Received enough balance responses",
             clientConfig.getId()));
         synchronized (this.latches.get(nonce)) {
@@ -284,7 +284,7 @@ public class Library {
 
   private void uponTransferResponse(ClientResponse response) {
     int senderId = response.getSenderId();
-    int nonce = response.deserializeTransferResponse().getNonce();
+    int nonce = response.deserializeTransferResponse().nonce();
 
     synchronized (this.responses) {
       // The transfer was already confirmed
@@ -336,29 +336,16 @@ public class Library {
             }
 
             switch (message.getType()) {
-              case BALANCE_RESPONSE -> {
-                uponBalanceResponse((ClientResponse) message);
-                break;
-              }
-              case TRANSFER_RESPONSE -> {
-                uponTransferResponse((ClientResponse) message);
-                break;
-              }
-              case ACK -> {
-                logger.info(MessageFormat.format("[{0}] - Received ACK message from {1}",
-                    clientConfig.getId(), message.getSenderId()));
-                continue;
-              }
-              case IGNORE -> {
+              case BALANCE_RESPONSE -> uponBalanceResponse((ClientResponse) message);
+              case TRANSFER_RESPONSE -> uponTransferResponse((ClientResponse) message);
+              case ACK -> logger.info(MessageFormat.format("[{0}] - Received ACK message from {1}",
+                  clientConfig.getId(), message.getSenderId()));
+              case IGNORE ->
                 logger.info(MessageFormat.format("[{0}] - Received IGNORE message from {1}",
                     clientConfig.getId(), message.getSenderId()));
-                continue;
-              }
-              default -> {
+              default ->
                 logger.info(MessageFormat.format("[{0}] - Received unknown message from {1}",
                     clientConfig.getId(), message.getSenderId()));
-                continue;
-              }
             }
           }
         } catch (HDSException e) {
