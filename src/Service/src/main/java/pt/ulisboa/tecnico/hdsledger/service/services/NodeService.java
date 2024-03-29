@@ -228,7 +228,7 @@ public class NodeService implements UDPService {
     }
 
     // Testing: Send duplicate transaction
-    if (config.getByzantineBehavior() == ByzantineBehavior.DuplicateTransaction) {
+    if (config.getByzantineBehavior() == ByzantineBehavior.ReplayLeader) {
       logger
           .info(MessageFormat.format("[{0}]: Sending duplicate transaction for (λ, r) = ({1}, {2})",
               config.getId(), localConsensusInstance, instance.getCurrentRound()));
@@ -333,7 +333,7 @@ public class NodeService implements UDPService {
     }
 
     // Testing: Send duplicate transaction
-    if (config.getByzantineBehavior() == ByzantineBehavior.DuplicateTransaction) {
+    if (config.getByzantineBehavior() == ByzantineBehavior.ReplayLeader) {
       logger
           .info(MessageFormat.format("[{0}]: Sending duplicate transaction for (λ, r) = ({1}, {2})",
               config.getId(), consensusInstance, instance.getCurrentRound()));
@@ -431,7 +431,7 @@ public class NodeService implements UDPService {
       }
 
       // Testing: Send duplicate transaction
-      if (config.getByzantineBehavior() == ByzantineBehavior.DuplicateTransaction) {
+      if (config.getByzantineBehavior() == ByzantineBehavior.ReplayLeader) {
         logger.info(
             MessageFormat.format("[{0}]: Sending duplicate transaction for (λ, r) = ({1}, {2})",
                 config.getId(), consensusInstance, instance.getCurrentRound()));

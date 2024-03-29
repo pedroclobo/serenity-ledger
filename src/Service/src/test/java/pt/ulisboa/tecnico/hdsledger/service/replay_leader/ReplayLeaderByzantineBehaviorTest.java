@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.hdsledger.service.duplicate_transaction;
+package pt.ulisboa.tecnico.hdsledger.service.replay_leader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,10 +14,10 @@ import pt.ulisboa.tecnico.hdsledger.service.ByzantineBehaviorTest;
 import pt.ulisboa.tecnico.hdsledger.service.Node;
 import pt.ulisboa.tecnico.hdsledger.service.models.Ledger;
 
-public class DuplicateTransactionByzantineBehaviorTest extends ByzantineBehaviorTest {
+public class ReplayLeaderByzantineBehaviorTest extends ByzantineBehaviorTest {
 
-  public DuplicateTransactionByzantineBehaviorTest() {
-    super("duplicate_transaction/nodes.json", "duplicate_transaction/clients.json");
+  public ReplayLeaderByzantineBehaviorTest() {
+    super("replay_leader/nodes.json", "replay_leader/clients.json");
   }
 
   @Test
