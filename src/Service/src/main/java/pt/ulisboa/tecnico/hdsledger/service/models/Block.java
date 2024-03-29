@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gson.Gson;
@@ -12,7 +13,7 @@ public class Block {
   private List<ClientRequest> transactions;
 
   public Block() {
-    transactions = List.of();
+    transactions = new ArrayList<>();
   }
 
   public int getConsensusInstance() {
