@@ -221,7 +221,7 @@ public class NodeService implements UDPService {
     PrePrepareMessage prePrepareMessage = new PrePrepareMessage(block.toJson());
 
     // Testing: Send fake value
-    if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
+    if (config.getByzantineBehavior() == ByzantineBehavior.DefaultValue) {
       logger.info(MessageFormat.format("[{0}]: Sending fake value for (λ, r) = ({1}, {2})",
           config.getId(), localConsensusInstance, instance.getCurrentRound()));
       prePrepareMessage = new PrePrepareMessage(new Block().toJson());
@@ -312,7 +312,7 @@ public class NodeService implements UDPService {
     PrepareMessage prepareMessage = new PrepareMessage(prePrepareMessage.getBlock());
 
     // Testing: Send fake value
-    if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
+    if (config.getByzantineBehavior() == ByzantineBehavior.DefaultValue) {
       logger.info(MessageFormat.format("[{0}]: Sending fake value for (λ, r) = ({1}, {2})",
           config.getId(), consensusInstance, instance.getCurrentRound()));
       prepareMessage = new PrepareMessage(new Block().toJson());
@@ -392,7 +392,7 @@ public class NodeService implements UDPService {
           .setConsensusInstance(consensusInstance).setRound(round).setMessage(c.toJson()).build();
 
       // Testing: Send fake value
-      if (config.getByzantineBehavior() == ByzantineBehavior.FakeValue) {
+      if (config.getByzantineBehavior() == ByzantineBehavior.DefaultValue) {
         logger.info(MessageFormat.format("[{0}]: Sending fake value for (λ, r) = ({1}, {2})",
             config.getId(), consensusInstance, instance.getCurrentRound()));
         m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
