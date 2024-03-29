@@ -227,6 +227,20 @@ public class NodeService implements UDPService {
       prePrepareMessage = new PrePrepareMessage(new Block().toJson());
     }
 
+    // Testing: Send duplicate transaction
+    if (config.getByzantineBehavior() == ByzantineBehavior.DuplicateTransaction) {
+      logger
+          .info(MessageFormat.format("[{0}]: Sending duplicate transaction for (λ, r) = ({1}, {2})",
+              config.getId(), localConsensusInstance, instance.getCurrentRound()));
+      // Find the first transfer transaction
+      Optional<ClientRequest> transfer = block.getTransactions().stream()
+          .filter(t -> t.getType() == Message.Type.TRANSFER_REQUEST).findFirst();
+
+      if (transfer.isPresent()) {
+        block.addTransaction(transfer.get());
+      }
+    }
+
     ConsensusMessage message = new ConsensusMessageBuilder(config.getId(), Message.Type.PRE_PREPARE)
         .setConsensusInstance(localConsensusInstance).setRound(instance.getCurrentRound())
         .setMessage(prePrepareMessage.toJson()).build();
@@ -318,6 +332,22 @@ public class NodeService implements UDPService {
       prepareMessage = new PrepareMessage(new Block().toJson());
     }
 
+    // Testing: Send duplicate transaction
+    if (config.getByzantineBehavior() == ByzantineBehavior.DuplicateTransaction) {
+      logger
+          .info(MessageFormat.format("[{0}]: Sending duplicate transaction for (λ, r) = ({1}, {2})",
+              config.getId(), consensusInstance, instance.getCurrentRound()));
+      // Find the first transfer transaction
+      Optional<ClientRequest> transfer = Block.fromJson(block).getTransactions().stream()
+          .filter(t -> t.getType() == Message.Type.TRANSFER_REQUEST).findFirst();
+
+      if (transfer.isPresent()) {
+        Block dupBlock = Block.fromJson(block);
+        dupBlock.addTransaction(transfer.get());
+        prepareMessage = new PrepareMessage(dupBlock.toJson());
+      }
+    }
+
     ConsensusMessage consensusMessage =
         new ConsensusMessageBuilder(config.getId(), Message.Type.PREPARE)
             .setConsensusInstance(consensusInstance).setRound(round)
@@ -398,6 +428,24 @@ public class NodeService implements UDPService {
         m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
             .setConsensusInstance(consensusInstance).setRound(round)
             .setMessage(new CommitMessage(new Block().toJson()).toJson()).build();
+      }
+
+      // Testing: Send duplicate transaction
+      if (config.getByzantineBehavior() == ByzantineBehavior.DuplicateTransaction) {
+        logger.info(
+            MessageFormat.format("[{0}]: Sending duplicate transaction for (λ, r) = ({1}, {2})",
+                config.getId(), consensusInstance, instance.getCurrentRound()));
+        // Find the first transfer transaction
+        Optional<ClientRequest> transfer = Block.fromJson(block).getTransactions().stream()
+            .filter(t -> t.getType() == Message.Type.TRANSFER_REQUEST).findFirst();
+
+        if (transfer.isPresent()) {
+          Block dupBlock = Block.fromJson(block);
+          dupBlock.addTransaction(transfer.get());
+          m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
+              .setConsensusInstance(consensusInstance).setRound(round)
+              .setMessage(new CommitMessage(dupBlock.toJson()).toJson()).build();
+        }
       }
 
       logger.info(MessageFormat.format("[{0}]: Broadcasting COMMIT message for (λ, r) = ({1}, {2})",
