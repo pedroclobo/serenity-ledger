@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.hdsledger.service.fake_value;
+package pt.ulisboa.tecnico.hdsledger.service.default_value;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,10 +14,10 @@ import pt.ulisboa.tecnico.hdsledger.service.ByzantineBehaviorTest;
 import pt.ulisboa.tecnico.hdsledger.service.Node;
 import pt.ulisboa.tecnico.hdsledger.service.models.Ledger;
 
-public class FakeValueByzantineBehaviorTest extends ByzantineBehaviorTest {
+public class DefaultValueByzantineBehaviorTest extends ByzantineBehaviorTest {
 
-  public FakeValueByzantineBehaviorTest() {
-    super("fake_value/nodes.json", "fake_value/clients.json");
+  public DefaultValueByzantineBehaviorTest() {
+    super("default_value/nodes.json", "default_value/clients.json");
   }
 
   @Test
