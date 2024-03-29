@@ -40,7 +40,11 @@ public class Node {
     nodesConfigPath += args[1];
     clientsConfigPath += args[2];
     int blockSize = Integer.parseInt(args[3]);
-    boolean debug = args[4].equals("-v") || args[4].equals("--verbose");
+    boolean debug = false;
+    if (args.length == 5) {
+      // Activate logs
+      debug = args[4].equals("--verbose") || args[4].equals("-v");
+    }
 
     // Retrieve nodes and client configurations
     ProcessConfig[] nodeConfigs = ProcessConfigBuilder.fromFile(nodesConfigPath);
