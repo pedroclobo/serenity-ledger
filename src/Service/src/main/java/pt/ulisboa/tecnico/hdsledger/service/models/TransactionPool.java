@@ -8,8 +8,8 @@ import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
 
 public class TransactionPool {
 
-  private int blockSize;
-  private List<ClientRequest> pool;
+  private final int blockSize;
+  private final List<ClientRequest> pool;
 
   public TransactionPool(int blockSize) {
     this.blockSize = blockSize;
@@ -31,7 +31,7 @@ public class TransactionPool {
         Block block = new Block();
         block.setTransactions(new ArrayList<>(pool.subList(0, blockSize)));
         return Optional.of(block);
-      } else if (pool.size() > 0) {
+      } else if (!pool.isEmpty()) {
         Block block = new Block();
         block.setTransactions(new ArrayList<>(pool));
         return Optional.of(block);

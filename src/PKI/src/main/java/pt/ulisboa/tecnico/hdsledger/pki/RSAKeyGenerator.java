@@ -66,7 +66,7 @@ public class RSAKeyGenerator {
     }
   }
 
-  public static Key read(String keyPath, String type)
+  public static void read(String keyPath, String type)
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
     System.out.println("Reading key from file " + keyPath + " ...");
     byte[] encoded;
@@ -77,11 +77,12 @@ public class RSAKeyGenerator {
     KeyFactory keyFactory = KeyFactory.getInstance("RSA");
     if (type.equals("pub")) {
       X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encoded);
-      return keyFactory.generatePublic(keySpec);
+      keyFactory.generatePublic(keySpec);
+      return;
     }
 
     PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
-    return keyFactory.generatePrivate(keySpec);
+    keyFactory.generatePrivate(keySpec);
   }
 
 }

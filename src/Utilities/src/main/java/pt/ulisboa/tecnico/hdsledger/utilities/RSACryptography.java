@@ -59,8 +59,8 @@ public class RSACryptography {
     return factory.generatePrivate(spec);
   }
 
-  public static String sign(String data, PrivateKey privateKey) throws InvalidKeyException,
-      NoSuchAlgorithmException, SignatureException, InvalidKeySpecException {
+  public static String sign(String data, PrivateKey privateKey)
+      throws InvalidKeyException, NoSuchAlgorithmException, SignatureException {
     java.security.Signature rsa = java.security.Signature.getInstance("SHA256withRSA");
     rsa.initSign(privateKey);
     rsa.update(data.getBytes());

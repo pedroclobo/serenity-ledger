@@ -2,9 +2,9 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 
 public class Account {
 
-  private int ownerId;
+  private final int ownerId;
   // Hash of public key
-  private String publicKeyHash;
+  private final String publicKeyHash;
   private int balance;
 
   public Account(int ownerId, String publicKeyHash) {
@@ -17,10 +17,6 @@ public class Account {
     return ownerId;
   }
 
-  public String getPublicKeyHash() {
-    return publicKeyHash;
-  }
-
   public int getBalance() {
     return balance;
   }
@@ -29,14 +25,12 @@ public class Account {
     this.balance += amount;
   }
 
-  public boolean subtractBalance(int amount) {
+  public void subtractBalance(int amount) {
     if (this.balance < amount) {
-      return false;
+      return;
     }
 
     this.balance -= amount;
-
-    return true;
   }
 
   @Override
@@ -49,10 +43,9 @@ public class Account {
     if (obj == null) {
       return false;
     }
-    if (!(obj instanceof Account)) {
+    if (!(obj instanceof Account other)) {
       return false;
     }
-    final Account other = (Account) obj;
 
     return ownerId == other.ownerId && publicKeyHash.equals(other.publicKeyHash)
         && balance == other.balance;

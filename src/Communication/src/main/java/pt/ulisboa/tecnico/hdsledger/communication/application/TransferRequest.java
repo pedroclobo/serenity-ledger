@@ -6,15 +6,15 @@ import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class TransferRequest {
 
-  private int nonce;
+  private final int nonce;
 
   // Serialized source public key
-  private String sourcePublicKey;
+  private final String sourcePublicKey;
 
   // Serialized destination public key
-  private String destinationPublicKey;
+  private final String destinationPublicKey;
 
-  private int amount;
+  private final int amount;
 
   public TransferRequest(int nonce, PublicKey sourcePublicKey, PublicKey destinationPublicKey,
       int amount) {

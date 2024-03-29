@@ -3,11 +3,9 @@ package pt.ulisboa.tecnico.hdsledger.client;
 import pt.ulisboa.tecnico.hdsledger.communication.application.BalanceResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.application.TransferResponse;
 import pt.ulisboa.tecnico.hdsledger.library.Library;
-import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
-import pt.ulisboa.tecnico.hdsledger.utilities.HDSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
-import java.util.Arrays;
+
 import java.util.Scanner;
 
 public class Client {
@@ -54,7 +52,7 @@ public class Client {
       String line = scanner.nextLine();
 
       // Empty command
-      if (line.trim().length() == 0) {
+      if (line.trim().isEmpty()) {
         System.out.println();
         continue;
       }
@@ -67,15 +65,15 @@ public class Client {
           if (tokens.length == 2) {
             System.out.println("Retrieving balance...");
             BalanceResponse response;
-            if (!isInteger(tokens[1])) {
+            if (isNotInteger(tokens[1])) {
               response = library.balance(keysPath + tokens[1]);
             } else {
               response = library.balance(Integer.parseInt(tokens[1]));
             }
-            if (!response.isSuccessful()) {
+            if (!response.successful()) {
               System.err.println("Operation failed");
             } else {
-              System.out.printf("Balance: %d%n", response.getAmount().get());
+              System.out.printf("Balance: %d%n", response.amount().get());
             }
           } else {
             System.err.println("Usage: balance <source>");
@@ -87,14 +85,14 @@ public class Client {
             System.out.printf("Transferring %s from %s to %s...%n", tokens[3], tokens[1],
                 tokens[2]);
             TransferResponse response;
-            if (!isInteger(tokens[1]) || !isInteger(tokens[2])) {
+            if (isNotInteger(tokens[1]) || isNotInteger(tokens[2])) {
               response = library.transfer(keysPath + tokens[1], keysPath + tokens[2],
                   Integer.parseInt(tokens[3]));
             } else {
               response = library.transfer(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]),
                   Integer.parseInt(tokens[3]));
             }
-            if (!response.isSuccessful()) {
+            if (!response.successful()) {
               System.err.println("Operation failed");
             } else {
               System.out.printf("Transfer of %s from %s to %s was successful!%n", tokens[3],
@@ -119,12 +117,12 @@ public class Client {
     }
   }
 
-  private static boolean isInteger(String s) {
+  private static boolean isNotInteger(String s) {
     try {
       Integer.parseInt(s);
-      return true;
-    } catch (NumberFormatException e) {
       return false;
+    } catch (NumberFormatException e) {
+      return true;
     }
   }
 }

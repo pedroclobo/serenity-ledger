@@ -10,9 +10,9 @@ import pt.ulisboa.tecnico.hdsledger.utilities.OptionalTypeAdapter;
 
 public class RoundChangeMessage {
 
-  private Optional<Integer> preparedRound;
-  private Optional<String> preparedBlock;
-  private Optional<Set<ConsensusMessage>> preparedQuorum;
+  private final Optional<Integer> preparedRound;
+  private final Optional<String> preparedBlock;
+  private final Optional<Set<ConsensusMessage>> preparedQuorum;
 
   public RoundChangeMessage() {
     this.preparedRound = Optional.empty();

@@ -1,23 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
-import java.util.Objects;
-
-public class Pair<T1, T2> {
-  private T1 first;
-  private T2 second;
-
-  public Pair(T1 first, T2 second) {
-    this.first = first;
-    this.second = second;
-  }
-
-  public T1 getFirst() {
-    return first;
-  }
-
-  public T2 getSecond() {
-    return second;
-  }
+public record Pair<T1, T2>(T1 first, T2 second) {
 
   @Override
   public boolean equals(Object obj) {
@@ -34,15 +17,8 @@ public class Pair<T1, T2> {
     } else if (!first.equals(other.first))
       return false;
     if (second == null) {
-      if (other.second != null)
-        return false;
-    } else if (!second.equals(other.second))
-      return false;
-    return true;
+      return other.second == null;
+    } else return second.equals(other.second);
   }
 
-  @Override
-  public int hashCode() {
-    return Objects.hash(first, second);
-  }
 }

@@ -2,7 +2,6 @@ package pt.ulisboa.tecnico.hdsledger.service;
 
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.application.ClientRequest;
-import pt.ulisboa.tecnico.hdsledger.communication.application.ClientResponse;
 import pt.ulisboa.tecnico.hdsledger.communication.consensus.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.service.models.TransactionPool;
 import pt.ulisboa.tecnico.hdsledger.service.services.ClientService;
@@ -23,10 +22,10 @@ public class Node {
   private static String nodesConfigPath = "src/main/resources/";
   private static String clientsConfigPath = "../Client/src/main/resources/";
 
-  private Link linkToNodes;
-  private Link linkToClients;
-  private NodeService nodeService;
-  private ClientService clientService;
+  private final Link linkToNodes;
+  private final Link linkToClients;
+  private final NodeService nodeService;
+  private final ClientService clientService;
 
   public static void main(String[] args) {
 

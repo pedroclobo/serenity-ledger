@@ -8,8 +8,8 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 public class HDSLogger {
-  private Logger logger;
-  private boolean debug;
+  private final Logger logger;
+  private final boolean debug;
 
   public HDSLogger(String name, boolean debug) {
     this.debug = debug;
@@ -38,8 +38,6 @@ public class HDSLogger {
 class HDSLogFormatter extends Formatter {
   @Override
   public String format(LogRecord record) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(record.getMessage()).append('\n');
-    return sb.toString();
+    return record.getMessage() + '\n';
   }
 }

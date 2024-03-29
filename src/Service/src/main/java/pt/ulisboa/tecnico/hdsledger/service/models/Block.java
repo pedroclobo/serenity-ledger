@@ -16,10 +16,6 @@ public class Block {
     transactions = new ArrayList<>();
   }
 
-  public int getConsensusInstance() {
-    return consensusInstance;
-  }
-
   public void setConsensusInstance(int consensusInstance) {
     this.consensusInstance = consensusInstance;
   }
@@ -54,10 +50,9 @@ public class Block {
     if (obj == null) {
       return false;
     }
-    if (!(obj instanceof Block)) {
+    if (!(obj instanceof Block other)) {
       return false;
     }
-    final Block other = (Block) obj;
 
     return consensusInstance == other.consensusInstance && transactions.equals(other.transactions);
   }

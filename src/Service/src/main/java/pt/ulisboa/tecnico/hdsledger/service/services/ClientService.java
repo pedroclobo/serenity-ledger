@@ -38,7 +38,7 @@ public class ClientService implements UDPService {
   // Transaction pool
   private final TransactionPool pool;
   // Timer (to call consensus after a certain time)
-  private Timer timer;
+  private final Timer timer;
   private final int TIMEOUT = 3000;
 
   public ClientService(Link link, ProcessConfig config, ProcessConfig[] clientConfigs,
@@ -63,11 +63,7 @@ public class ClientService implements UDPService {
     }, 0, TIMEOUT);
   }
 
-  public ProcessConfig getConfig() {
-    return this.config;
-  }
-
-  private boolean verifyClientSignature(ClientRequest message) {
+  private boolean invalidSignature(ClientRequest message) {
 
     // Find configuration of the sender
     Optional<ProcessConfig> clientConfig = Arrays.stream(this.clientConfigs)
@@ -81,7 +77,7 @@ public class ClientService implements UDPService {
     try {
       PublicKey publicKey = RSACryptography.readPublicKey(clientConfig.get().getPublicKeyPath());
       if (RSACryptography.verify(message.getMessage(), publicKey, message.getSignature())) {
-        return true;
+        return false;
       }
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
       throw new HDSException(ErrorMessage.SignatureVerificationError);
@@ -89,14 +85,14 @@ public class ClientService implements UDPService {
 
     logger.info(MessageFormat.format("Invalid client signature from {0}", message.getSenderId()));
 
-    return false;
+    return true;
   }
 
   public void balance(ClientRequest message) {
     logger.info(MessageFormat.format("[{0}]: Received balance request from {1}",
         this.config.getId(), message.getSenderId()));
 
-    if (!verifyClientSignature(message)) {
+    if (invalidSignature(message)) {
       logger.info(MessageFormat.format("[{0}]: Invalid signature for balance request",
           this.config.getId()));
       return;
@@ -112,7 +108,7 @@ public class ClientService implements UDPService {
     logger.info(MessageFormat.format("[{0}]: Received Transfer from {1}", this.config.getId(),
         message.getSenderId()));
 
-    if (!verifyClientSignature(message)) {
+    if (invalidSignature(message)) {
       logger.info(MessageFormat.format("[{0}]: Invalid Signature", this.config.getId()));
       return;
     }
@@ -164,12 +160,6 @@ public class ClientService implements UDPService {
                 case BALANCE_REQUEST -> balance((ClientRequest) message);
 
                 case TRANSFER_REQUEST -> transfer((ClientRequest) message);
-
-                case ACK -> {
-                }
-
-                case IGNORE -> {
-                }
 
                 default -> {
                 }

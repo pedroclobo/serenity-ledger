@@ -2,18 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.communication.consensus;
 
 import com.google.gson.Gson;
 
-public class PrePrepareMessage {
-
-  // Serialized block
-  private String block;
-
-  public PrePrepareMessage(String block) {
-    this.block = block;
-  }
-
-  public String getBlock() {
-    return block;
-  }
+public record PrePrepareMessage(String block) {
 
   public String toJson() {
     return new Gson().toJson(this);

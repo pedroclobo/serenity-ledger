@@ -28,15 +28,15 @@ class GreedyClientByzantineBehaviorTest extends ByzantineBehaviorTest {
     }
 
     TransferResponse transferResponse = libraries.get(0).transfer(5, 6, 100);
-    assertFalse(transferResponse.isSuccessful(), "Transfer request should be unsuccessful");
+    assertFalse(transferResponse.successful(), "Transfer request should be unsuccessful");
 
     BalanceResponse balanceResponse = libraries.get(0).balance(5);
-    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(1000, balanceResponse.getAmount().get(), "Initial balance should be 1000");
+    assertTrue(balanceResponse.successful(), "Balance request should be successful");
+    assertEquals(1000, balanceResponse.amount().get(), "Initial balance should be 1000");
 
     balanceResponse = libraries.get(0).balance(6);
-    assertTrue(balanceResponse.isSuccessful(), "Balance request should be successful");
-    assertEquals(1000, balanceResponse.getAmount().get(), "Initial balance should be 1000");
+    assertTrue(balanceResponse.successful(), "Balance request should be successful");
+    assertEquals(1000, balanceResponse.amount().get(), "Initial balance should be 1000");
 
     List<Integer> sizes = new ArrayList<>();
     List<Ledger> ledgers = new ArrayList<>();

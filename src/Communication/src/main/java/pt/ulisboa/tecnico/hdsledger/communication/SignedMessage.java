@@ -10,7 +10,7 @@ import java.security.spec.InvalidKeySpecException;
 import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 
 public class SignedMessage {
-  private String messageJson;
+  private final String messageJson;
   private String signature;
 
   public SignedMessage(Message message) {
@@ -20,22 +20,6 @@ public class SignedMessage {
 
   public String getMessageJson() {
     return messageJson;
-  }
-
-  public String getSignature() {
-    return signature;
-  }
-
-  public void setMessageJson(String messageJson) {
-    this.messageJson = messageJson;
-  }
-
-  public void setSignature(String signature) {
-    this.signature = signature;
-  }
-
-  public boolean hasSignature() {
-    return signature != null;
   }
 
   public boolean equals(SignedMessage other) {

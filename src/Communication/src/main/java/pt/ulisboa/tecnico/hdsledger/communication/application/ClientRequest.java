@@ -14,8 +14,8 @@ import pt.ulisboa.tecnico.hdsledger.utilities.RSACryptography;
 public class ClientRequest extends Message {
 
   // Serialized message
-  private String message;
-  private String signature;
+  private final String message;
+  private final String signature;
 
   public ClientRequest(int senderId, Type type, String message, String signature) {
     super(senderId, type);
@@ -31,26 +31,18 @@ public class ClientRequest extends Message {
     return new Gson().fromJson(this.message, BalanceRequest.class);
   }
 
-  public String getMessage() {
-    return message;
-  }
-
-  public void setMessage(String message) {
-    this.message = message;
-  }
-
   public String getSignature() {
     return signature;
   }
 
-  public void setSignature(String signature) {
-    this.signature = signature;
+  public String getMessage() {
+    return message;
   }
 
-  public boolean verifySignature(String publicKeyPath) throws InvalidKeyException,
+  public boolean invalidSignature(String publicKeyPath) throws InvalidKeyException,
       NoSuchAlgorithmException, SignatureException, InvalidKeySpecException {
     PublicKey publicKey = RSACryptography.readPublicKey(publicKeyPath);
-    return RSACryptography.verify(this.message, publicKey, this.signature);
+    return !RSACryptography.verify(this.message, publicKey, this.signature);
   }
 
   @Override
@@ -63,10 +55,9 @@ public class ClientRequest extends Message {
     if (obj == null) {
       return false;
     }
-    if (!(obj instanceof ClientRequest)) {
+    if (!(obj instanceof ClientRequest other)) {
       return false;
     }
-    final ClientRequest other = (ClientRequest) obj;
 
     return getSenderId() == other.getSenderId() && getType() == other.getType()
         && message.equals(other.message) && signature.equals(other.signature);

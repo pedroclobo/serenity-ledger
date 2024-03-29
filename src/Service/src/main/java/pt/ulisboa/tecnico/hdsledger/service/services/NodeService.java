@@ -80,12 +80,12 @@ public class NodeService implements UDPService {
   private final Map<Integer, Set<Integer>> clientNonces = new ConcurrentHashMap<>();
 
   // Ledger
-  private Ledger ledger;
+  private final Ledger ledger;
 
-  private TransactionPool pool;
+  private final TransactionPool pool;
 
   // Fee for each update transaction
-  private int FEE = 10;
+  private final int FEE = 10;
 
   // Map between client id and public key
   private final Map<Integer, String> clientPublicKeys = new ConcurrentHashMap<>();
@@ -148,7 +148,7 @@ public class NodeService implements UDPService {
         logger.info(
             MessageFormat.format("[{0}]: Timer fired, starting round change", config.getId()));
       }
-    }, TIMEOUT
+    }, (long) TIMEOUT
         * (int) (Math.pow(2, instanceInfo.get(currentConsensusInstance.get()).getCurrentRound())
             - 1));
   }
@@ -236,9 +236,7 @@ public class NodeService implements UDPService {
       Optional<ClientRequest> transfer = block.getTransactions().stream()
           .filter(t -> t.getType() == Message.Type.TRANSFER_REQUEST).findFirst();
 
-      if (transfer.isPresent()) {
-        block.addTransaction(transfer.get());
-      }
+      transfer.ifPresent(block::addTransaction);
     }
 
     ConsensusMessage message = new ConsensusMessageBuilder(config.getId(), Message.Type.PRE_PREPARE)
@@ -246,15 +244,15 @@ public class NodeService implements UDPService {
         .setMessage(prePrepareMessage.toJson()).build();
 
     if (this.config.isLeader(localConsensusInstance, instance.getCurrentRound())) {
-      logger.info(
-          MessageFormat.format("[{0}]: I'm the leader, sending PRE-PREPARE for (λ, r) = ({1}, {2})",
-              config.getId(), localConsensusInstance, instance.getCurrentRound()));
+      logger.info(MessageFormat.format(
+          "[{0}]: I am the leader, sending PRE-PREPARE for (λ, r) = ({1}, {2})", config.getId(),
+          localConsensusInstance, instance.getCurrentRound()));
       this.link.broadcast(message);
 
       // Testing: Fake leader sends PRE-PREPARE
     } else if (this.config.getByzantineBehavior() == ProcessConfig.ByzantineBehavior.FakeLeader) {
       logger.info(MessageFormat.format(
-          "[{0}]: I'm the (fake) leader, sending PRE-PREPARE for (λ, r) = ({1}, {2})",
+          "[{0}]: I am the (fake) leader, sending PRE-PREPARE for (λ, r) = ({1}, {2})",
           config.getId(), localConsensusInstance, instance.getCurrentRound()));
       this.link.broadcast(message);
 
@@ -280,7 +278,7 @@ public class NodeService implements UDPService {
     int round = message.getRound();
     int senderId = message.getSenderId();
     int senderMessageId = message.getMessageId();
-    String block = prePrepareMessage.getBlock();
+    String block = prePrepareMessage.block();
 
     // Set instance value if missing
     if (!setupConsensus.contains(consensusInstance)) {
@@ -323,7 +321,7 @@ public class NodeService implements UDPService {
     restartTimer();
 
     // Broadcast PREPARE
-    PrepareMessage prepareMessage = new PrepareMessage(prePrepareMessage.getBlock());
+    PrepareMessage prepareMessage = new PrepareMessage(prePrepareMessage.block());
 
     // Testing: Send fake value
     if (config.getByzantineBehavior() == ByzantineBehavior.DefaultValue) {
@@ -371,7 +369,7 @@ public class NodeService implements UDPService {
 
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
-    String block = prepareMessage.getBlock();
+    String block = prepareMessage.block();
 
     // Set instance value if missing
     if (!setupConsensus.contains(consensusInstance)) {
@@ -416,7 +414,6 @@ public class NodeService implements UDPService {
 
       // Broadcast COMMIT
       CommitMessage c = new CommitMessage(block);
-      instance.setCommitMessage(c);
 
       ConsensusMessage m = new ConsensusMessageBuilder(config.getId(), Message.Type.COMMIT)
           .setConsensusInstance(consensusInstance).setRound(round).setMessage(c.toJson()).build();
@@ -449,7 +446,7 @@ public class NodeService implements UDPService {
       }
 
       logger.info(MessageFormat.format("[{0}]: Broadcasting COMMIT message for (λ, r) = ({1}, {2})",
-          config.getId(), consensusInstance, round, block));
+          config.getId(), consensusInstance, round));
 
       link.broadcast(m);
     }
@@ -461,12 +458,10 @@ public class NodeService implements UDPService {
    * @param message Message to be handled
    */
   public synchronized void uponCommit(ConsensusMessage message) {
-    CommitMessage commitMessage = message.deserializeCommitMessage();
-
     int senderId = message.getSenderId();
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
-    String block = commitMessage.getBlock();
+    String block;
 
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
@@ -496,17 +491,16 @@ public class NodeService implements UDPService {
 
       // Update instance committed values
       instance = this.instanceInfo.get(consensusInstance);
-      instance.setCommittedRound(round);
       instance.setCommitQuorum(commitQuorum);
       instance.setTriggeredCommitQuorumRule(round);
       block =
-          commitQuorum.stream().map(m -> m.deserializeCommitMessage().getBlock()).findFirst().get();
+          commitQuorum.stream().map(m -> m.deserializeCommitMessage().block()).findFirst().get();
 
       // Stop the timer
       stopTimer();
 
       // Add the value to the ledger
-      decide(consensusInstance, round, Block.fromJson(block));
+      decide(consensusInstance, Block.fromJson(block));
 
       // Apply block to the ledger
       applyBlockAndReplyToClients(consensusInstance);
@@ -524,8 +518,8 @@ public class NodeService implements UDPService {
   private void applyBlockAndReplyToClients(int consensusInstance) {
     if (consensusInstance > lastDecidedConsensusInstance.get()) {
       logger.info(MessageFormat.format(
-          "[{0}]: Can't apply block for consensus instance {1} that is not decided", config.getId(),
-          consensusInstance));
+          "[{0}]: Cannot apply block for consensus instance {1} that is not decided",
+          config.getId(), consensusInstance));
       return;
     }
 
@@ -541,16 +535,12 @@ public class NodeService implements UDPService {
           int nonce = balanceRequest.getNonce();
           String publicKeyPath = clientPublicKeys.get(clientId);
 
-          boolean valid = true;
-
           // Check if the nonce is valid
-          if (clientNonces.get(clientId).contains(nonce)) {
-            valid = false;
-          }
+          boolean valid = !clientNonces.get(clientId).contains(nonce);
 
           // Check if the signature is valid
           try {
-            if (!transaction.verifySignature(publicKeyPath)) {
+            if (transaction.invalidSignature(publicKeyPath)) {
               valid = false;
             }
           } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
@@ -565,7 +555,7 @@ public class NodeService implements UDPService {
           } catch (NoSuchAlgorithmException e) {
             throw new HDSException(ErrorMessage.DigestError);
           }
-          if (!ledger.hasAccount(publicKeyHash)) {
+          if (ledger.doesNotHaveAccount(publicKeyHash)) {
             valid = false;
           }
 
@@ -606,16 +596,12 @@ public class NodeService implements UDPService {
           PublicKey sourcePublicKey = transferRequest.getSourcePublicKey();
           PublicKey destinationPublicKey = transferRequest.getDestinationPublicKey();
 
-          valid = true;
-
           // Check if the nonce is valid
-          if (clientNonces.get(clientId).contains(nonce)) {
-            valid = false;
-          }
+          valid = !clientNonces.get(clientId).contains(nonce);
 
           // Check if the signature is valid
           try {
-            if (!transaction.verifySignature(publicKeyPath)) {
+            if (transaction.invalidSignature(publicKeyPath)) {
               valid = false;
             }
           } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
@@ -637,8 +623,8 @@ public class NodeService implements UDPService {
           } catch (NoSuchAlgorithmException e) {
             throw new HDSException(ErrorMessage.DigestError);
           }
-          if (!ledger.hasAccount(sourcePublicKeyHash)
-              || !ledger.hasAccount(destinationPublicKeyHash)) {
+          if (ledger.doesNotHaveAccount(sourcePublicKeyHash)
+              || ledger.doesNotHaveAccount(destinationPublicKeyHash)) {
             valid = false;
           }
 
@@ -661,8 +647,7 @@ public class NodeService implements UDPService {
           if (!valid) {
             // Send response to client
             TransferResponse transferResponse = new TransferResponse(false,
-                transferRequest.getNonce(), transferRequest.getSourcePublicKey(),
-                transferRequest.getDestinationPublicKey(), transferRequest.getAmount());
+                transferRequest.getNonce(), transferRequest.getAmount());
             ClientResponse response = new ClientResponse(config.getId(),
                 Message.Type.TRANSFER_RESPONSE, transferResponse.toJson());
 
@@ -692,9 +677,8 @@ public class NodeService implements UDPService {
             leaderAccount.addBalance(FEE);
 
             // Send response to client
-            TransferResponse transferResponse = new TransferResponse(true,
-                transferRequest.getNonce(), transferRequest.getSourcePublicKey(),
-                transferRequest.getDestinationPublicKey(), amount);
+            TransferResponse transferResponse =
+                new TransferResponse(true, transferRequest.getNonce(), amount);
             ClientResponse response = new ClientResponse(config.getId(),
                 Message.Type.TRANSFER_RESPONSE, transferResponse.toJson());
 
@@ -710,7 +694,7 @@ public class NodeService implements UDPService {
     }
   }
 
-  private synchronized void decide(int consensusInstance, int round, Block block) {
+  private synchronized void decide(int consensusInstance, Block block) {
     block.setConsensusInstance(consensusInstance);
 
     ledger.add(block);
@@ -796,7 +780,7 @@ public class NodeService implements UDPService {
 
     // Check that all messages have the same prepared value
     if (preparedQuorum.stream().map(ConsensusMessage::deserializePrepareMessage)
-        .map(PrepareMessage::getBlock).distinct().count() != 1) {
+        .map(PrepareMessage::block).distinct().count() != 1) {
       logger.info(MessageFormat.format(
           "[{0}]: Invalid prepared quorum for (λ, r) = ({1}, {2}), as that are different values, ignoring",
           config.getId(), consensusInstance, round));
@@ -885,8 +869,8 @@ public class NodeService implements UDPService {
       // There is a highest prepared value
       // Update values
       if (highestPrepared.isPresent()) {
-        highestPreparedRound = highestPrepared.get().getFirst();
-        highestPreparedValue = highestPrepared.get().getSecond();
+        highestPreparedRound = highestPrepared.get().first();
+        highestPreparedValue = highestPrepared.get().second();
       }
 
       InstanceInfo instanceInfo = this.instanceInfo.get(currentConsensusInstance.get());
@@ -990,13 +974,9 @@ public class NodeService implements UDPService {
 
     // All commit messages must have the same value
     long valueCount =
-        quorum.stream().map(m -> m.deserializeCommitMessage().getBlock()).distinct().count();
+        quorum.stream().map(m -> m.deserializeCommitMessage().block()).distinct().count();
 
-    if (valueCount != 1) {
-      return false;
-    }
-
-    return true;
+    return valueCount == 1;
   }
 
   public synchronized void uponCommitQuorum(ConsensusMessage message) {
@@ -1004,8 +984,8 @@ public class NodeService implements UDPService {
 
     int consensusInstance = message.getConsensusInstance();
     int round = message.getRound();
-    String block = commitQuorumMessage.getQuorum().stream()
-        .map(m -> m.deserializeCommitMessage().getBlock()).findFirst().get();
+    String block = commitQuorumMessage.quorum().stream()
+        .map(m -> m.deserializeCommitMessage().block()).findFirst().get();
 
     if (consensusInstance <= lastDecidedConsensusInstance.get()) {
       logger.info(MessageFormat.format(
@@ -1014,7 +994,7 @@ public class NodeService implements UDPService {
       return;
     }
 
-    if (!verifyCommitQuorum(commitQuorumMessage.getQuorum())) {
+    if (!verifyCommitQuorum(commitQuorumMessage.quorum())) {
       logger.info(
           MessageFormat.format("[{0}]: Invalid COMMIT_QUORUM for (λ, r) = ({1}, {2}), ignoring",
               config.getId(), consensusInstance, round));
@@ -1026,7 +1006,7 @@ public class NodeService implements UDPService {
 
     stopTimer();
 
-    decide(consensusInstance, round, Block.fromJson(block));
+    decide(consensusInstance, Block.fromJson(block));
 
     applyBlockAndReplyToClients(consensusInstance);
 
@@ -1072,12 +1052,6 @@ public class NodeService implements UDPService {
                 case ROUND_CHANGE -> uponRoundChange((ConsensusMessage) message);
 
                 case COMMIT_QUORUM -> uponCommitQuorum((ConsensusMessage) message);
-
-                case ACK -> {
-                }
-
-                case IGNORE -> {
-                }
 
                 default -> {
                 }
