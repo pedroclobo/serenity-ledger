@@ -697,7 +697,9 @@ public class NodeService implements UDPService {
   private synchronized void decide(int consensusInstance, Block block) {
     block.setConsensusInstance(consensusInstance);
 
-    ledger.add(block);
+    if (!block.isEmpty()) {
+      ledger.add(block);
+    }
 
     logger.info(MessageFormat.format("[{0}]: Current Ledger has {1} blocks", config.getId(),
         ledger.getLedger().size()));
