@@ -7,6 +7,11 @@ guarantees. It uses the Istanbul BFT consensus algorithm to ensure that all node
 in the same order, achieving State Machine Replication (SMR) and guarantees that all nodes
 have the same state.
 
+[Stage 1 Statement](docs/stage-1.pdf)\
+[Stage 1 Report](docs/report-1.pdf)\
+[Stage 2 Statement](docs/stage-2.pdf)\
+[Stage 2 Report](docs/report-2.pdf)
+
 ## Requirements
 
 - [Java 17](https://www.oracle.com/java/technologies/javase-jdk17-downloads.html) - Programming language;
