@@ -32,6 +32,10 @@ public class Block {
     this.transactions = transactions;
   }
 
+  public boolean isEmpty() {
+    return transactions.isEmpty();
+  }
+
   public static Block fromJson(String json) {
     return new Gson().fromJson(json, Block.class);
   }
