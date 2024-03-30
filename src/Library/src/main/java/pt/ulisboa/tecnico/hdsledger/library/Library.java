@@ -72,13 +72,13 @@ public class Library {
     listen();
   }
 
-  public BalanceResponse balance(int sourceId) {
+  public BalanceResponse balance(int sourceId) throws HDSException {
     // Node id
-    if (sourceId <= nodeConfigs.length) {
+    if (sourceId > 0 && sourceId <= nodeConfigs.length) {
       return balance(nodeConfigs[sourceId - 1].getPublicKeyPath());
 
       // Client id
-    } else if (sourceId <= nodeConfigs.length + clientConfigs.length) {
+    } else if (sourceId > 0 && sourceId <= nodeConfigs.length + clientConfigs.length) {
       return balance(clientConfigs[sourceId - nodeConfigs.length - 1].getPublicKeyPath());
 
     } else {
@@ -86,7 +86,7 @@ public class Library {
     }
   }
 
-  public BalanceResponse balance(String sourcePublicKeyPath) {
+  public BalanceResponse balance(String sourcePublicKeyPath) throws HDSException {
     // Grab nonce of the request
     int nonce = this.nonce.getAndIncrement();
 
@@ -145,7 +145,8 @@ public class Library {
     return response;
   }
 
-  public TransferResponse transfer(int sourceId, int destinationId, int amount) {
+  public TransferResponse transfer(int sourceId, int destinationId, int amount)
+      throws HDSException {
     if (!(nodeConfigs.length < sourceId && sourceId <= nodeConfigs.length + clientConfigs.length)) {
       throw new HDSException(ErrorMessage.NoSuchClient);
     }
@@ -160,7 +161,7 @@ public class Library {
   }
 
   public TransferResponse transfer(String sourcePublicKeyPath, String destinationPublicKeyPath,
-      int amount) {
+      int amount) throws HDSException {
     // Grab nonce of the request
     int nonce = this.nonce.getAndIncrement();
 

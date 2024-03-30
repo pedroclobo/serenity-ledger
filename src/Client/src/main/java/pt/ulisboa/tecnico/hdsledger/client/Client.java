@@ -63,17 +63,23 @@ public class Client {
 
         case "balance" -> {
           if (tokens.length == 2) {
-            System.out.println("Retrieving balance...");
             BalanceResponse response;
-            if (isNotInteger(tokens[1])) {
-              response = library.balance(keysPath + tokens[1]);
-            } else {
-              response = library.balance(Integer.parseInt(tokens[1]));
-            }
-            if (!response.successful()) {
-              System.err.println("Operation failed");
-            } else {
-              System.out.printf("Balance: %d%n", response.amount().get());
+            System.out.println("Retrieving balance...");
+            try {
+              // Balance can be retrieved by using the client's id or the client's public key
+              if (isNotInteger(tokens[1])) {
+                response = library.balance(keysPath + tokens[1]);
+              } else {
+                response = library.balance(Integer.parseInt(tokens[1]));
+              }
+              // Check if the balance was successfully retrieved
+              if (!response.successful()) {
+                System.err.println("Operation failed");
+              } else {
+                System.out.printf("Balance: %d%n", response.amount().get());
+              }
+            } catch (Exception e) {
+              System.err.println("Operation failed with message: " + e.getMessage());
             }
           } else {
             System.err.println("Usage: balance <source>");
@@ -82,21 +88,28 @@ public class Client {
 
         case "transfer" -> {
           if (tokens.length == 4) {
+            TransferResponse response;
             System.out.printf("Transferring %s from %s to %s...%n", tokens[3], tokens[1],
                 tokens[2]);
-            TransferResponse response;
-            if (isNotInteger(tokens[1]) || isNotInteger(tokens[2])) {
-              response = library.transfer(keysPath + tokens[1], keysPath + tokens[2],
-                  Integer.parseInt(tokens[3]));
-            } else {
-              response = library.transfer(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]),
-                  Integer.parseInt(tokens[3]));
-            }
-            if (!response.successful()) {
-              System.err.println("Operation failed");
-            } else {
-              System.out.printf("Transfer of %s from %s to %s was successful!%n", tokens[3],
-                  tokens[1], tokens[2]);
+            try {
+              // Transfer can be done by using the client's id or the client's public key
+              if (isNotInteger(tokens[1]) || isNotInteger(tokens[2])) {
+                response = library.transfer(keysPath + tokens[1], keysPath + tokens[2],
+                    Integer.parseInt(tokens[3]));
+              } else {
+                response = library.transfer(Integer.parseInt(tokens[1]),
+                    Integer.parseInt(tokens[2]), Integer.parseInt(tokens[3]));
+              }
+
+              // Check if the transfer was successful
+              if (!response.successful()) {
+                System.err.println("Operation failed");
+              } else {
+                System.out.printf("Transfer of %s from %s to %s was successful!%n", tokens[3],
+                    tokens[1], tokens[2]);
+              }
+            } catch (Exception e) {
+              System.err.println("Operation failed with message: " + e.getMessage());
             }
           } else {
             System.err.println("Usage: transfer <source> <destination> <amount>");
