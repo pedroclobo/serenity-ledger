@@ -18,18 +18,23 @@ public class HDSLogger {
     ConsoleHandler handler = new ConsoleHandler();
     handler.setFormatter(new HDSLogFormatter());
     logger.addHandler(handler);
-
-    try {
-      FileHandler fileHandler = new FileHandler("log", true);
-      fileHandler.setFormatter(new HDSLogFormatter());
-      logger.addHandler(fileHandler);
-    } catch (Exception e) {
-    }
   }
 
   public void info(String message) {
     if (!debug)
       return;
+
+    // Lazy initialization of log file
+    if (logger.getHandlers().length <= 1) {
+      try {
+        FileHandler fileHandler = new FileHandler("src/main/resources/hds.log", false);
+        fileHandler.setFormatter(new HDSLogFormatter());
+        logger.addHandler(fileHandler);
+      } catch (Exception e) {
+        System.err.println("Failed to create log file");
+      }
+    }
+
     logger.log(Level.INFO, message);
   }
 }
