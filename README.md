@@ -56,16 +56,18 @@ The following fields are required:
 - `port` - Port used for communication with nodes;
 - `publicKeyPath` - Path to the public key of the client;
 - `privateKeyPath` - Path to the private key of the client;
+- `byzantineBehavior` - Behavior adopted by the client.
 
 Below is an example of a configuration file with one client.
 
 ```json
 [{
-        "id": "<CLIENT_ID>",
-        "hostname": "localhost",
-        "port": "<CLIENT_PORT>",
-        "publicKeyPath": "<PUBLIC_KEY_PATH>",
-        "privateKeyPath": "<PRIVATE_KEY_PATH>"
+    "id": "<CLIENT_ID>",
+    "hostname": "localhost",
+    "port": "<CLIENT_PORT>",
+    "publicKeyPath": "<PUBLIC_KEY_PATH>",
+    "privateKeyPath": "<PRIVATE_KEY_PATH>",
+    "byzantineBehavior": "<BYZANTINE_BEHAVIOR>"
 }]
 ```
 
@@ -99,17 +101,17 @@ Begin by running the `Service` module.
 
 ```
 cd Service
-mvn compile exec:java -Dexec.args="1 regular_config.json" &
-mvn compile exec:java -Dexec.args="2 regular_config.json" &
-mvn compile exec:java -Dexec.args="3 regular_config.json" &
-mvn compile exec:java -Dexec.args="4 regular_config.json" &
+mvn compile exec:java -Dexec.args="1 none/nodes.json none/clients.json 2 -v" &
+mvn compile exec:java -Dexec.args="2 none/nodes.json none/clients.json 2 -v" &
+mvn compile exec:java -Dexec.args="3 none/nodes.json none/clients.json 2 -v" &
+mvn compile exec:java -Dexec.args="4 none/nodes.json none/clients.json 2 -v" &
 ```
 
 Then, run the `Client` module.
 
 ```
 cd Client
-mvn compile exec:java -Dexec.args="5 regular_config.json client_config.json" &
+mvn compile exec:java -Dexec.args="5 none/nodes.json none/clients.json -v" &
 ```
 
 
