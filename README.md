@@ -97,7 +97,7 @@ cd PKI
 mvn compile exec:java -Dexec.args="w <priv-key-file> <pub-key-file>"
 ```
 
-Then update the `config.json` files with the path to the generated keys in the `Service` and `Client` modules.
+Then update the `clients.json` and `nodes.json` files with the path to the generated keys in the `resources/` folders of the `Client` and `Service` modules.
 
 
 ### Execution
@@ -119,6 +119,28 @@ cd Client
 mvn compile exec:java -Dexec.args="5 none/nodes.json none/clients.json -v" &
 ```
 
+### Client API
+
+The application allows the user to interact with the blockchain through a command line interface. The following commands are available:
+
+
+Transfer a given `amount` from account `source` to account `destination`. Where `source` and `destination` are the client's ids or public key file names.
+
+```
+transfer <source> <destination> <amount>
+```
+
+Obtain the balance of a certain `account`. Where `account` is the client's id or public key file name.
+
+```
+balance <account>
+```
+
+Exit the client application.
+
+```
+exit
+```
 
 ### Testing
 
