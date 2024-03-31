@@ -101,6 +101,8 @@ Each node maintains a transaction pool, which holds the requests issued by the c
 
 To avoid executions where a client issues an operation that is waiting for a block in the transaction pool, but there aren't enough transactions to fill a block, the node periodically checks if such transactions exist and will propose a block to consensus that is, exceptionally, shorter than the designated block size. This optimization offers a shorter response time when the system is under lower load, as blocks don't have to be filled up to their capacity to be proposed to consensus.
 
+When a block is decided, the transactions contained in that block are removed from the transaction pool.
+
 \subsection{Replay Attacks}
 
 To avoid replay attacks, each operation issued by the client has a nonce. Upon deciding a block, each node registers that particular nonce, issued by that particular client, checking if it was already used. When validating transactions, as detailed in section \ref{validation}, transactions with repeated nonces are invalidated.
